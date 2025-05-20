@@ -42,17 +42,17 @@ const Footer = () => {
             <h4 className="font-semibold text-gray-800 mb-4">Access</h4>
             <ul className="space-y-2">
               <li>
-                <Link to="/dashboard/student" className="text-gray-600 hover:text-edu-blue transition-colors">
+                <Link to="/signin/student" className="text-gray-600 hover:text-edu-blue transition-colors">
                   Student Dashboard
                 </Link>
               </li>
               <li>
-                <Link to="/dashboard/faculty" className="text-gray-600 hover:text-edu-blue transition-colors">
+                <Link to="/signin/faculty" className="text-gray-600 hover:text-edu-blue transition-colors">
                   Faculty Portal
                 </Link>
               </li>
               <li>
-                <Link to="/dashboard/admin" className="text-gray-600 hover:text-edu-blue transition-colors">
+                <Link to="/signin/admin" className="text-gray-600 hover:text-edu-blue transition-colors">
                   Admin Console
                 </Link>
               </li>

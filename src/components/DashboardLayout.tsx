@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   GraduationCap,
@@ -27,6 +27,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const userType = profile?.user_type || "student";
   const initials = profile?.first_name && profile?.last_name
@@ -44,6 +45,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
   const navItems = [
@@ -89,15 +94,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className={`flex items-center px-4 py-3 text-gray-700 rounded-lg transition-colors ${
+                    isActive(item.href)
+                      ? "bg-edu-blue/10 text-edu-blue font-medium"
+                      : "hover:bg-gray-100"
+                  }`}
                 >
-                  {item.icon}
+                  <span className={isActive(item.href) ? "text-edu-blue" : ""}>{item.icon}</span>
                   <span className="ml-3">{item.name}</span>
                 </Link>
               ))}
             </nav>
 
-            <div className="px-4">
+            <div className="px-4 mt-4">
               <Button
                 variant="outline"
                 className="w-full flex items-center justify-center"
@@ -129,14 +138,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* User profile dropdown would go here */}
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-700 hidden md:inline-block">
                   {profile?.first_name
-                    ? `${profile.first_name} ${profile.last_name}`
+                    ? `${profile.first_name} ${profile.last_name || ""}`
                     : user?.email}
                 </span>
-                <Avatar className="h-9 w-9">
+                <Avatar className="h-9 w-9 cursor-pointer" onClick={() => navigate('/profile')}>
                   <AvatarImage src={profile?.avatar_url || ""} />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
