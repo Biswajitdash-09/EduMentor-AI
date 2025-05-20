@@ -79,6 +79,12 @@ const Assessments = () => {
     }
   };
 
+  const getScoreIndicatorClass = (score: number) => {
+    if (score >= 80) return "bg-green-500";
+    if (score >= 60) return "bg-amber-500";
+    return "bg-red-500";
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -182,10 +188,7 @@ const Assessments = () => {
                               <Progress 
                                 value={assessment.score} 
                                 className="h-2"
-                                indicatorColor={
-                                  assessment.score >= 80 ? "bg-green-500" : 
-                                  assessment.score >= 60 ? "bg-amber-500" : "bg-red-500"
-                                }
+                                indicatorClassName={getScoreIndicatorClass(assessment.score)}
                               />
                             </div>
                           )}

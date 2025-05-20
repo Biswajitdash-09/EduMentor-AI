@@ -20,7 +20,7 @@ const RiskAnalysis = () => {
     courseProgress: 65
   };
   
-  const getIndicatorColor = (value: number) => {
+  const getIndicatorClass = (value: number) => {
     if (value >= 80) return "bg-green-500";
     if (value >= 60) return "bg-amber-500";
     return "bg-red-500";
@@ -283,7 +283,7 @@ const RiskAnalysis = () => {
                         <span>Attendance</span>
                         <span>{riskFactors.attendance}%</span>
                       </div>
-                      <Progress value={riskFactors.attendance} className="h-2" indicatorColor={getIndicatorColor(riskFactors.attendance)} />
+                      <Progress value={riskFactors.attendance} className="h-2" indicatorClassName={getIndicatorClass(riskFactors.attendance)} />
                     </div>
                     
                     <div className="space-y-2">
@@ -291,7 +291,7 @@ const RiskAnalysis = () => {
                         <span>Assessment Completion</span>
                         <span>{riskFactors.assessmentCompletion}%</span>
                       </div>
-                      <Progress value={riskFactors.assessmentCompletion} className="h-2" indicatorColor={getIndicatorColor(riskFactors.assessmentCompletion)} />
+                      <Progress value={riskFactors.assessmentCompletion} className="h-2" indicatorClassName={getIndicatorClass(riskFactors.assessmentCompletion)} />
                     </div>
                     
                     <div className="space-y-2">
@@ -299,7 +299,7 @@ const RiskAnalysis = () => {
                         <span>Grade Average</span>
                         <span>{riskFactors.gradeAverage}%</span>
                       </div>
-                      <Progress value={riskFactors.gradeAverage} className="h-2" indicatorColor={getIndicatorColor(riskFactors.gradeAverage)} />
+                      <Progress value={riskFactors.gradeAverage} className="h-2" indicatorClassName={getIndicatorClass(riskFactors.gradeAverage)} />
                     </div>
                     
                     <div className="space-y-2">
@@ -307,7 +307,7 @@ const RiskAnalysis = () => {
                         <span>Participation Rate</span>
                         <span>{riskFactors.participationRate}%</span>
                       </div>
-                      <Progress value={riskFactors.participationRate} className="h-2" indicatorColor={getIndicatorColor(riskFactors.participationRate)} />
+                      <Progress value={riskFactors.participationRate} className="h-2" indicatorClassName={getIndicatorClass(riskFactors.participationRate)} />
                     </div>
                   </div>
                   
