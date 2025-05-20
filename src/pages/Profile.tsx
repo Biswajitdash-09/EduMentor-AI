@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -10,15 +10,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
+import { v4 as uuidv4 } from 'uuid';
 
 const Profile = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, updateProfile } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -52,29 +55,72 @@ const Profile = () => {
     setIsUpdating(true);
     
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+      await updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Error in component when updating profile:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    setIsUploading(true);
+    try {
+      // Check if the storage bucket exists, create it if it doesn't
+      const { data: bucketData } = await supabase.storage.getBucket('avatars');
+      if (!bucketData) {
+        // Create the bucket if it doesn't exist
+        await supabase.storage.createBucket('avatars', {
+          public: true
+        });
+      }
+
+      // Upload the file
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/${uuidv4()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          upsert: true
+        });
         
-      if (error) throw error;
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+        
+      const avatarUrl = data.publicUrl;
+
+      // Update the profile with the avatar URL
+      await updateProfile({
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString(),
+      });
+
+      setAvatarUrl(avatarUrl);
       
       toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
+        title: "Avatar updated",
+        description: "Your profile picture has been updated successfully.",
       });
     } catch (error: any) {
       toast({
-        title: "Error updating profile",
+        title: "Error uploading avatar",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setIsUpdating(false);
+      setIsUploading(false);
     }
   };
 
@@ -170,12 +216,35 @@ const Profile = () => {
                     : user?.email?.substring(0, 2).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
               
-              <Button variant="outline" disabled>
-                Change Avatar
+              <Button 
+                variant="outline" 
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Avatar
+                  </>
+                )}
               </Button>
               <p className="text-xs text-gray-500 text-center">
-                Avatar upload feature coming soon
+                Supported formats: JPG, PNG, GIF (max 2MB)
               </p>
             </CardContent>
           </Card>

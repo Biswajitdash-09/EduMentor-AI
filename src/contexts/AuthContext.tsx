@@ -12,6 +12,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData: any) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (profileData: Partial<any>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,6 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear local state
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
+      // Clear any local storage items related to auth state
+      localStorage.removeItem('supabase.auth.token');
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
@@ -129,6 +139,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       toast({
         title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add function to update profile
+  const updateProfile = async (profileData: Partial<any>) => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update local profile state with new data
+      setProfile(prev => ({ ...prev, ...profileData }));
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error updating profile",
         description: error.message,
         variant: "destructive",
       });
@@ -143,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     signOut,
+    updateProfile,
   };
 
   return (

@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -13,10 +14,10 @@ import { Loader2, Moon, Sun } from "lucide-react";
 
 const Settings = () => {
   const { user, profile, loading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [language, setLanguage] = useState("english");
-  const [theme, setTheme] = useState("light");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveSettings = () => {
@@ -73,7 +74,7 @@ const Settings = () => {
                       <Button 
                         variant={theme === "light" ? "default" : "outline"} 
                         className={theme === "light" ? "bg-edu-blue" : ""}
-                        onClick={() => setTheme("light")}
+                        onClick={toggleTheme}
                       >
                         <Sun className="h-4 w-4 mr-2" />
                         Light
@@ -81,15 +82,12 @@ const Settings = () => {
                       <Button 
                         variant={theme === "dark" ? "default" : "outline"}
                         className={theme === "dark" ? "bg-edu-blue" : ""}
-                        onClick={() => setTheme("dark")}
+                        onClick={toggleTheme}
                       >
                         <Moon className="h-4 w-4 mr-2" />
                         Dark
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Note: Dark mode is coming in a future update.
-                    </p>
                   </div>
                   
                   <div className="space-y-2">
