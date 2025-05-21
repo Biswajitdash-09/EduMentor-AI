@@ -22,8 +22,7 @@ import RiskAnalysis from "./pages/RiskAnalysis";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import GuestDashboard from "./pages/GuestDashboard";
-
-const queryClient = new QueryClient();
+import { useState } from "react";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -117,20 +116,32 @@ const AppRoutes = () => (
   </Routes>
 );
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <ThemeProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </ThemeProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Create a new QueryClient instance inside the component
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+      },
+    },
+  }));
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </ThemeProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
