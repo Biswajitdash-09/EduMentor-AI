@@ -35,8 +35,6 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-- **URL**: https://lovable.dev/projects/4a73ddb0-a7e3-4523-8dcc-1b0bc923ae73
-
 
 **What technologies are used for this project?**
 
