@@ -1,10 +1,7 @@
-
 import { Link } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
-
 const Footer = () => {
-  return (
-    <footer className="bg-gray-100 py-10">
+  return <footer className="bg-gray-100 py-10">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
@@ -80,13 +77,9 @@ const Footer = () => {
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
             &copy; {new Date().getFullYear()} EduMentor AI. All rights reserved.
           </p>
-          <p className="text-gray-500 text-sm">
-            Created with ❤️ by team Pixel Pirates
-          </p>
+          <p className="text-gray-500 text-sm">Created with ❤️ by Team Pixel Pirates</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
