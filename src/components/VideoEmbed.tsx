@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface VideoEmbedProps {
   videoId: string;
@@ -10,7 +10,18 @@ interface VideoEmbedProps {
 }
 
 const VideoEmbed = ({ videoId, title, courseId }: VideoEmbedProps) => {
-  const navigate = useNavigate();
+  // Get navigate function if we're in a router context, otherwise undefined
+  const navigate = useNavigate ? useNavigate() : undefined;
+  const location = useLocation ? useLocation() : undefined;
+  
+  const handleEnrollClick = () => {
+    if (navigate) {
+      navigate(`/courses/${courseId}/enroll`);
+    } else {
+      // Fallback for when used outside router context
+      window.location.href = `/courses/${courseId}/enroll`;
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -28,7 +39,7 @@ const VideoEmbed = ({ videoId, title, courseId }: VideoEmbedProps) => {
       <div className="flex justify-end mt-4">
         <Button
           className="bg-edu-blue hover:bg-edu-blue-dark"
-          onClick={() => navigate(`/courses/${courseId}/enroll`)}
+          onClick={handleEnrollClick}
         >
           Enroll Now
         </Button>
