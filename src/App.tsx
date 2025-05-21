@@ -17,6 +17,7 @@ import AITutor from "./pages/AITutor";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Courses from "./pages/Courses";
+import CourseEnrollment from "./pages/CourseEnrollment";
 import Assessments from "./pages/Assessments";
 import RiskAnalysis from "./pages/RiskAnalysis";
 import Privacy from "./pages/Privacy";
@@ -92,6 +93,11 @@ const AppRoutes = () => (
     <Route path="/courses" element={
       <ProtectedRoute>
         <Courses />
+      </ProtectedRoute>
+    } />
+    <Route path="/courses/:courseId/enroll" element={
+      <ProtectedRoute>
+        <CourseEnrollment />
       </ProtectedRoute>
     } />
     <Route path="/assessments" element={
