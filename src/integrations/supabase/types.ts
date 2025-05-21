@@ -127,6 +127,30 @@ export type Database = {
           },
         ]
       }
+      payment_plans: {
+        Row: {
+          created_at: string | null
+          features: Json
+          id: string
+          name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string | null
+          features: Json
+          id?: string
+          name: string
+          price: number
+        }
+        Update: {
+          created_at?: string | null
+          features?: Json
+          id?: string
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -225,6 +249,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_statistics: {
+        Row: {
+          id: string
+          last_updated: string | null
+          page_path: string
+          visitor_count: number
+        }
+        Insert: {
+          id?: string
+          last_updated?: string | null
+          page_path: string
+          visitor_count?: number
+        }
+        Update: {
+          id?: string
+          last_updated?: string | null
+          page_path?: string
+          visitor_count?: number
+        }
+        Relationships: []
+      }
       student_responses: {
         Row: {
           id: string
@@ -259,6 +304,74 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievements: {
+        Row: {
+          badges: Json
+          completed_assessments: number
+          completed_courses: number
+          created_at: string | null
+          id: string
+          last_activity: string | null
+          points: number
+          user_id: string
+        }
+        Insert: {
+          badges?: Json
+          completed_assessments?: number
+          completed_courses?: number
+          created_at?: string | null
+          id?: string
+          last_activity?: string | null
+          points?: number
+          user_id: string
+        }
+        Update: {
+          badges?: Json
+          completed_assessments?: number
+          completed_courses?: number
+          created_at?: string | null
+          id?: string
+          last_activity?: string | null
+          points?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_payments: {
+        Row: {
+          amount: number
+          id: string
+          payment_date: string | null
+          payment_status: string
+          plan_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          payment_date?: string | null
+          payment_status: string
+          plan_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          payment_date?: string | null
+          payment_status?: string
+          plan_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "payment_plans"
             referencedColumns: ["id"]
           },
         ]

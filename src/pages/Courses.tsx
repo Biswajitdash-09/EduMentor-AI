@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Film, FileText, BookUser, ListChecks, LucideIcon } from "lucide-react";
+import { BookOpen, Film, FileText, BookUser, ListChecks, LucideIcon, Trophy, Award } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import VideoEmbed from "@/components/VideoEmbed";
 import MCQuiz from "@/components/MCQuiz";
 import { MCQuestion } from "@/components/MCQuiz";
+import { supabase } from "@/integrations/supabase/client";
+import ViewAssessmentResults, { AssessmentResult } from "@/components/ViewAssessmentResults";
 
 type Course = {
   id: string;
@@ -231,7 +234,7 @@ const dummyCourses: Course[] = [
     icon: BookUser,
     color: "from-edu-blue-light to-edu-purple",
     modules: 8,
-    videoId: "xOfqMG6kUO4" // Updated Modern history video - "History of the World in 7 Minutes"
+    videoId: "Yocja_N5s1I" // Updated Modern history video - Crash Course World History
   }
 ];
 
@@ -267,17 +270,244 @@ const availableCourses = [
 ];
 
 const Courses = () => {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [enrolledCourses] = useState<Course[]>(dummyCourses);
+  const { toast } = useToast();
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "video" | "assignments">("overview");
+  const [isQuizCompleted, setIsQuizCompleted] = useState<boolean>(false);
+  const [quizResults, setQuizResults] = useState<AssessmentResult | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const userType = profile?.user_type || "student";
 
   const selectedCourse = enrolledCourses.find(course => course.id === selectedCourseId);
   
-  const handleEnrollNow = (courseId: string) => {
-    navigate(`/courses/${courseId}/enroll`);
+  useEffect(() => {
+    // Initialize with default courses but check for any enrolled courses in Supabase
+    if (user) {
+      fetchEnrolledCourses();
+    } else {
+      setEnrolledCourses(dummyCourses);
+      setLoading(false);
+    }
+  }, [user]);
+
+  const fetchEnrolledCourses = async () => {
+    setLoading(true);
+    try {
+      // Get user's enrollments
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from('enrollments')
+        .select('course_id')
+        .eq('user_id', user?.id);
+        
+      if (enrollmentsError) throw enrollmentsError;
+      
+      if (enrollmentsData && enrollmentsData.length > 0) {
+        // User has enrollments, let's use those course IDs
+        const userCourseIds = enrollmentsData.map(enrollment => enrollment.course_id);
+        
+        // Filter dummyCourses to only include enrolled courses
+        // In a real app, we would fetch course details from the database here
+        const userCourses = dummyCourses.filter(course => 
+          userCourseIds.includes(course.id)
+        );
+        
+        setEnrolledCourses(userCourses.length > 0 ? userCourses : dummyCourses);
+      } else {
+        // No enrollments yet, use default courses
+        setEnrolledCourses(dummyCourses);
+      }
+    } catch (error) {
+      console.error('Error fetching enrolled courses:', error);
+      setEnrolledCourses(dummyCourses);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnrollNow = async (courseId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to enroll in this course",
+        variant: "destructive",
+      });
+      navigate('/signin/student');
+      return;
+    }
+    
+    try {
+      // Check if already enrolled
+      const { data: existingEnrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
+        
+      if (existingEnrollment) {
+        toast({
+          title: "Already enrolled",
+          description: "You are already enrolled in this course",
+        });
+        
+        // Add the course to enrolledCourses if it's not already there
+        const courseExists = enrolledCourses.some(course => course.id === courseId);
+        if (!courseExists) {
+          const courseToAdd = dummyCourses.find(course => course.id === courseId);
+          if (courseToAdd) {
+            setEnrolledCourses(prev => [...prev, courseToAdd]);
+          }
+        }
+        
+        setSelectedCourseId(courseId);
+        setActiveTab("overview");
+        return;
+      }
+      
+      // Create new enrollment
+      await supabase.from('enrollments').insert({
+        user_id: user.id,
+        course_id: courseId
+      });
+      
+      // Find the course from available courses
+      const enrolledCourse = dummyCourses.find(course => course.id === courseId);
+      
+      if (enrolledCourse) {
+        // Add to enrolledCourses
+        setEnrolledCourses(prev => [...prev, enrolledCourse]);
+        
+        // Update user achievements
+        try {
+          const { data: achievements } = await supabase
+            .from('user_achievements')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (achievements) {
+            // Update existing record
+            await supabase
+              .from('user_achievements')
+              .update({
+                points: achievements.points + 50,
+                last_activity: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+          } else {
+            // Create new record
+            await supabase
+              .from('user_achievements')
+              .insert({
+                user_id: user.id,
+                points: 50,
+                completed_courses: 0,
+                completed_assessments: 0,
+                last_activity: new Date().toISOString()
+              });
+          }
+        } catch (achievementError) {
+          console.error('Error updating achievements:', achievementError);
+        }
+        
+        toast({
+          title: "Enrollment successful",
+          description: `You have been enrolled in ${enrolledCourse.title}`,
+        });
+        
+        // Navigate to the course
+        setSelectedCourseId(courseId);
+        setActiveTab("overview");
+      }
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+      toast({
+        title: "Enrollment failed",
+        description: "There was an error enrolling in this course",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleQuizSubmit = async (score: number, totalQuestions: number) => {
+    if (!user || !selectedCourse) return;
+    
+    try {
+      // Calculate the percentage score
+      const percentScore = Math.round((score / totalQuestions) * 100);
+      
+      // Create mock quiz results
+      const courseQuestions = mcqQuestions[selectedCourse.id];
+      if (!courseQuestions) return;
+      
+      // Create random results for demonstration purposes
+      const mockResults: AssessmentResult = {
+        id: `quiz-${selectedCourse.id}-${Date.now()}`,
+        title: `${selectedCourse.title} Quiz`,
+        totalQuestions: courseQuestions.length,
+        correctAnswers: score,
+        completedAt: new Date().toISOString(),
+        score: percentScore,
+        questions: courseQuestions.map((q, idx) => {
+          // Randomly determine if the question was answered correctly
+          const isCorrect = idx < score;
+          return {
+            id: q.id,
+            question: q.question,
+            userAnswer: isCorrect ? q.options[q.correctAnswerIndex] : q.options[(q.correctAnswerIndex + 1) % q.options.length],
+            correctAnswer: q.options[q.correctAnswerIndex],
+            isCorrect
+          };
+        })
+      };
+      
+      setQuizResults(mockResults);
+      setIsQuizCompleted(true);
+      
+      // Update user achievements
+      try {
+        const { data: achievements } = await supabase
+          .from('user_achievements')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (achievements) {
+          // Update existing record with points and completed assessment
+          await supabase
+            .from('user_achievements')
+            .update({
+              points: achievements.points + (percentScore > 70 ? 100 : 50),
+              completed_assessments: achievements.completed_assessments + 1,
+              last_activity: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+        } else {
+          // Create new record
+          await supabase
+            .from('user_achievements')
+            .insert({
+              user_id: user.id,
+              points: percentScore > 70 ? 100 : 50,
+              completed_courses: 0,
+              completed_assessments: 1,
+              last_activity: new Date().toISOString()
+            });
+        }
+        
+        toast({
+          title: "Assessment completed",
+          description: `You scored ${percentScore}% on this assessment`,
+        });
+      } catch (achievementError) {
+        console.error('Error updating achievements:', achievementError);
+      }
+    } catch (error) {
+      console.error('Error saving quiz results:', error);
+    }
   };
 
   return (
@@ -320,7 +550,11 @@ const Courses = () => {
           </TabsList>
           
           <TabsContent value="enrolled">
-            {enrolledCourses.length > 0 ? (
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-edu-blue"></div>
+              </div>
+            ) : enrolledCourses.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {enrolledCourses.map((course) => (
                   <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -353,6 +587,7 @@ const Courses = () => {
                         onClick={() => {
                           setSelectedCourseId(course.id);
                           setActiveTab("overview");
+                          setIsQuizCompleted(false);
                         }}
                       >
                         Continue Learning
@@ -368,7 +603,19 @@ const Courses = () => {
                 <p className="text-gray-500 mb-4">
                   You haven't enrolled in any courses yet. Browse available courses to get started.
                 </p>
-                <Button className="bg-edu-blue hover:bg-edu-blue-dark">
+                <Button 
+                  className="bg-edu-blue hover:bg-edu-blue-dark"
+                  onClick={() => {
+                    const tabElements = document.querySelectorAll('[role="tab"]');
+                    const availableTab = Array.from(tabElements).find(
+                      (tab) => tab.getAttribute('data-value') === 'available' ||
+                              tab.getAttribute('value') === 'available'
+                    );
+                    if (availableTab instanceof HTMLElement) {
+                      availableTab.click();
+                    }
+                  }}
+                >
                   Browse Courses
                 </Button>
               </div>
@@ -618,11 +865,20 @@ const Courses = () => {
                       </TabsContent>
 
                       <TabsContent value="assignments" className="space-y-6">
-                        {mcqQuestions[selectedCourse.id] ? (
+                        {isQuizCompleted && quizResults ? (
+                          <ViewAssessmentResults 
+                            result={quizResults} 
+                            onClose={() => {
+                              setIsQuizCompleted(false);
+                              setQuizResults(null);
+                            }} 
+                          />
+                        ) : mcqQuestions[selectedCourse.id] ? (
                           <MCQuiz
                             title={`${selectedCourse.title} - Knowledge Check`}
                             description="Complete this quiz to test your understanding of the video lecture"
                             questions={mcqQuestions[selectedCourse.id]}
+                            onQuizSubmit={handleQuizSubmit}
                           />
                         ) : (
                           <div className="text-center py-10">
@@ -637,6 +893,21 @@ const Courses = () => {
                     </Tabs>
                   </CardContent>
                 </Card>
+                
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                  <div className="flex items-center">
+                    <Trophy className="h-5 w-5 text-edu-blue mr-2" />
+                    <span className="font-medium">Complete this course to earn achievement badges and points!</span>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate("/leaderboard")}
+                    className="flex items-center"
+                  >
+                    <Award className="h-4 w-4 mr-1" />
+                    View Leaderboard
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>

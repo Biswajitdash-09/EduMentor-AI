@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Menu, X } from "lucide-react";
+import { GraduationCap, Menu, X, Award, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
@@ -39,6 +39,10 @@ const Navbar = () => {
           </Link>
           <Link to="/about" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
             About
+          </Link>
+          <Link to="/leaderboard" className="text-gray-700 hover:text-edu-blue font-medium transition-colors flex items-center">
+            <Award className="h-4 w-4 mr-1" />
+            Leaderboard
           </Link>
           
           {user ? (
@@ -108,6 +112,14 @@ const Navbar = () => {
               onClick={toggleMenu}
             >
               About
+            </Link>
+            <Link
+              to="/leaderboard"
+              className="text-gray-700 hover:text-edu-blue font-medium transition-colors px-4 py-2 flex items-center"
+              onClick={toggleMenu}
+            >
+              <Award className="h-4 w-4 mr-1" />
+              Leaderboard
             </Link>
             
             {user ? (
