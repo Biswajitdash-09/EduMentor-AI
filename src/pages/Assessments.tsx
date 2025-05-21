@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { ListChecks, CheckCircle2, Clock, AlertTriangle, Calendar } from "lucide-react";
+import MCQuiz from "@/components/MCQuiz";
+import { MCQuestion } from "@/components/MCQuiz";
 
 type Assessment = {
   id: string;
@@ -18,8 +20,68 @@ type Assessment = {
   status: 'pending' | 'completed' | 'overdue';
   score?: number;
   totalQuestions: number;
+  questions?: MCQuestion[];
 };
 
+const sampleQuestions: MCQuestion[] = [
+  {
+    id: "q1",
+    question: "What is the primary purpose of a learning management system?",
+    options: [
+      "To manage employee payroll", 
+      "To facilitate online learning and course management", 
+      "To store large amounts of data", 
+      "To create graphics for presentations"
+    ],
+    correctAnswerIndex: 1
+  },
+  {
+    id: "q2",
+    question: "Which of the following is NOT a common feature of educational technology platforms?",
+    options: [
+      "Assignment submission", 
+      "Video lectures", 
+      "Hardware repair", 
+      "Discussion forums"
+    ],
+    correctAnswerIndex: 2
+  },
+  {
+    id: "q3",
+    question: "What does LMS stand for in educational technology?",
+    options: [
+      "Learning Management System", 
+      "Lecture Modification Service", 
+      "Large Media Storage", 
+      "Live Meeting Software"
+    ],
+    correctAnswerIndex: 0
+  },
+  {
+    id: "q4",
+    question: "Which of these is a benefit of online learning platforms?",
+    options: [
+      "Limited accessibility", 
+      "Physical classroom requirements", 
+      "Flexibility in time and location", 
+      "Higher costs than traditional education"
+    ],
+    correctAnswerIndex: 2
+  },
+  {
+    id: "q5",
+    question: "What type of assessment provides immediate feedback to learners?",
+    options: [
+      "End of semester exams", 
+      "Peer grading", 
+      "Interactive quizzes", 
+      "Written essays"
+    ],
+    correctAnswerIndex: 2
+  }
+];
+
+// Update sample assessments with questions
 const sampleAssessments: Assessment[] = [
   {
     id: "1",
@@ -28,6 +90,7 @@ const sampleAssessments: Assessment[] = [
     dueDate: "2025-05-25T23:59:59",
     status: "pending",
     totalQuestions: 15,
+    questions: sampleQuestions,
   },
   {
     id: "2",
@@ -45,13 +108,16 @@ const sampleAssessments: Assessment[] = [
     dueDate: "2025-05-10T23:59:59",
     status: "overdue",
     totalQuestions: 10,
+    questions: sampleQuestions,
   }
 ];
 
 const Assessments = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [assessments] = useState<Assessment[]>(sampleAssessments);
   const userType = profile?.user_type || "student";
+  const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
   
   const pendingAssessments = assessments.filter(a => a.status === "pending");
   const completedAssessments = assessments.filter(a => a.status === "completed");
@@ -85,6 +151,14 @@ const Assessments = () => {
     return "bg-red-500";
   };
 
+  const handleStartAssessment = (assessment: Assessment) => {
+    setActiveAssessment(assessment);
+  };
+
+  const handleCloseAssessment = () => {
+    setActiveAssessment(null);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -95,7 +169,23 @@ const Assessments = () => {
             : "Create and manage assessments for your students."}
         </p>
 
-        {userType === "student" ? (
+        {activeAssessment ? (
+          <div className="space-y-4">
+            <Button 
+              variant="outline" 
+              onClick={handleCloseAssessment}
+              className="mb-4"
+            >
+              Back to Assessments
+            </Button>
+            
+            <MCQuiz 
+              title={activeAssessment.title}
+              description={`This assessment is part of the course: ${activeAssessment.course}`}
+              questions={activeAssessment.questions || []}
+            />
+          </div>
+        ) : userType === "student" ? (
           <Tabs defaultValue="pending" className="w-full">
             <TabsList className="mb-6">
               <TabsTrigger value="pending">Pending ({pendingAssessments.length})</TabsTrigger>
@@ -132,7 +222,10 @@ const Assessments = () => {
                         </div>
                       </CardContent>
                       <CardFooter>
-                        <Button className="w-full bg-edu-blue hover:bg-edu-blue-dark">
+                        <Button 
+                          className="w-full bg-edu-blue hover:bg-edu-blue-dark"
+                          onClick={() => handleStartAssessment(assessment)}
+                        >
                           Start Assessment
                         </Button>
                       </CardFooter>

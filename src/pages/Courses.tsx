@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -230,7 +231,7 @@ const dummyCourses: Course[] = [
     icon: BookUser,
     color: "from-edu-blue-light to-edu-purple",
     modules: 8,
-    videoId: "Mii5FdTzqjs" // Modern history video
+    videoId: "xOfqMG6kUO4" // Updated Modern history video - "History of the World in 7 Minutes"
   }
 ];
 
@@ -267,12 +268,17 @@ const availableCourses = [
 
 const Courses = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [enrolledCourses] = useState<Course[]>(dummyCourses);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "video" | "assignments">("overview");
   const userType = profile?.user_type || "student";
 
   const selectedCourse = enrolledCourses.find(course => course.id === selectedCourseId);
+  
+  const handleEnrollNow = (courseId: string) => {
+    navigate(`/courses/${courseId}/enroll`);
+  };
 
   return (
     <DashboardLayout>
@@ -401,7 +407,10 @@ const Courses = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full bg-edu-blue hover:bg-edu-blue-dark">
+                    <Button 
+                      className="w-full bg-edu-blue hover:bg-edu-blue-dark"
+                      onClick={() => handleEnrollNow(course.id)}
+                    >
                       Enroll Now
                     </Button>
                   </CardFooter>
