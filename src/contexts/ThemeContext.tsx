@@ -27,8 +27,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Sync theme with user profile if logged in
   useEffect(() => {
-    if (user && profile) {
-      const userTheme = profile.theme as Theme;
+    if (user && profile && profile.theme_preference) {
+      const userTheme = profile.theme_preference as Theme;
       if (userTheme && userTheme !== theme) {
         setTheme(userTheme);
         applyTheme(userTheme);
@@ -55,7 +55,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       try {
         await supabase
           .from('profiles')
-          .update({ theme: newTheme })
+          .update({ theme_preference: newTheme })
           .eq('id', user.id);
       } catch (error) {
         console.error('Error saving theme preference to database:', error);
