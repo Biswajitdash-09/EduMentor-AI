@@ -20,9 +20,9 @@ const HeroBanner = () => {
             </div>
           </div>
           <div className="hidden lg:flex justify-end">
-            <img src="/placeholder.svg" alt="AI Education Platform" className="max-w-full h-auto" style={{
+            <img alt="AI Education Platform" className="max-w-full h-auto" style={{
             maxHeight: '400px'
-          }} />
+          }} src="/lovable-uploads/94bc6fe6-11a0-40a6-80aa-f3cf03f2df9b.png" />
           </div>
         </div>
       </div>
