@@ -54,7 +54,7 @@ const PaymentGateway = () => {
         if (error) throw error;
         
         if (data) {
-          // Cast parsedFeatures as string[] to fix TypeScript error
+          // Create an empty string array for features, explicitly typed
           const parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
@@ -83,10 +83,12 @@ const PaymentGateway = () => {
             }
           } else if (data.features && typeof data.features === 'object') {
             // If features is an object
-            // Use type assertion to help TypeScript understand this is an object with string values
+            // Explicitly type the parsed features array to fix the TypeScript error
             const featuresObj = data.features as Record<string, any>;
-            Object.values(featuresObj).forEach((feature: any) => {
-              parsedFeatures.push(String(feature));
+            Object.values(featuresObj).forEach((feature) => {
+              // Explicitly convert to string to ensure type compatibility
+              const featureStr: string = String(feature);
+              parsedFeatures.push(featureStr);
             });
           }
               
