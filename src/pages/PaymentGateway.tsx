@@ -68,7 +68,7 @@ const PaymentGateway = () => {
             }
           } else if (data.features && typeof data.features === 'object') {
             // If it's already a parsed JSON object from Supabase
-            parsedFeatures = Object.values(data.features).map(f => String(f));
+            parsedFeatures = Object.values(data.features).map(item => String(item));
           }
               
           setPaymentPlan({
