@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,7 +53,7 @@ const PaymentGateway = () => {
         if (error) throw error;
         
         if (data) {
-          // Parse features properly based on the data type
+          // Explicitly define parsedFeatures as string array
           let parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
@@ -77,9 +76,8 @@ const PaymentGateway = () => {
             }
           } else if (data.features && typeof data.features === 'object') {
             // If features is an object
-            // Explicitly type the object values as any before mapping to string
-            const featureValues: any[] = Object.values(data.features as Record<string, any>);
-            parsedFeatures = featureValues.map(item => String(item));
+            const featureValues = Object.values(data.features as Record<string, any>);
+            parsedFeatures = featureValues.map((item: any) => String(item));
           }
               
           setPaymentPlan({
