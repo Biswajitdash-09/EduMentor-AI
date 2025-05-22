@@ -13,6 +13,8 @@ import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
+import FacultyDashboard from "./pages/FacultyDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import AITutor from "./pages/AITutor";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
@@ -62,6 +64,46 @@ const FacultyRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Admin only route
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, profile, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/signin/admin" />;
+  }
+  
+  if (profile?.user_type !== "admin") {
+    return <Navigate to="/dashboard" />;
+  }
+  
+  return children;
+};
+
+// Role-based dashboard redirect
+const DashboardRouter = () => {
+  const { profile, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  
+  if (!profile) {
+    return <Navigate to="/signin/student" />;
+  }
+  
+  if (profile.user_type === "admin") {
+    return <Navigate to="/admin" />;
+  } else if (profile.user_type === "faculty") {
+    return <Navigate to="/faculty" />;
+  } else {
+    return <Navigate to="/student" />;
+  }
+};
+
 const AppRoutes = () => {
   // Initialize user achievements when user logs in
   const { user } = useAuth();
@@ -108,12 +150,35 @@ const AppRoutes = () => {
       <Route path="/dashboard/guest" element={<GuestDashboard />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       
-      {/* Protected Routes */}
+      {/* Dashboard Router */}
       <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <DashboardRouter />
+        </ProtectedRoute>
+      } />
+      
+      {/* Student Dashboard */}
+      <Route path="/student" element={
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
       } />
+      
+      {/* Faculty Dashboard */}
+      <Route path="/faculty" element={
+        <FacultyRoute>
+          <FacultyDashboard />
+        </FacultyRoute>
+      } />
+      
+      {/* Admin Dashboard */}
+      <Route path="/admin" element={
+        <AdminRoute>
+          <AdminDashboard />
+        </AdminRoute>
+      } />
+      
+      {/* Protected Routes */}
       <Route path="/ai-tutor" element={
         <ProtectedRoute>
           <AITutor />

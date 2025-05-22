@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Medal, Star, Award, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { motion } from "framer-motion";
 
 type LeaderboardUser = {
   user_id: string;
@@ -20,6 +21,21 @@ type LeaderboardUser = {
   last_name?: string;
   avatar_url?: string;
 }
+
+const fadeInUpVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
+
+const staggerContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
 
 const Leaderboard = () => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
@@ -104,7 +120,13 @@ const Leaderboard = () => {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Leaderboard</span>
+          <motion.span 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            Leaderboard
+          </motion.span>
           <Tabs value={rankType} onValueChange={(value) => setRankType(value as "points" | "completed_courses" | "completed_assessments")}>
             <TabsList>
               <TabsTrigger value="points">Points</TabsTrigger>
@@ -120,11 +142,18 @@ const Leaderboard = () => {
             <Loader2 className="h-8 w-8 animate-spin text-edu-blue" />
           </div>
         ) : leaderboardData.length > 0 ? (
-          <div className="space-y-2">
+          <motion.div 
+            className="space-y-2"
+            variants={staggerContainerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {leaderboardData.map((item) => (
-              <div 
+              <motion.div 
                 key={item.user_id} 
-                className={`flex items-center justify-between p-2 rounded-md ${getUserRankClass(item.user_id)}`}
+                className={`flex items-center justify-between p-2 rounded-md hover:bg-gray-50 transition-colors ${getUserRankClass(item.user_id)}`}
+                variants={fadeInUpVariants}
+                whileHover={{ scale: 1.01 }}
               >
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-edu-blue/10">
@@ -151,9 +180,9 @@ const Leaderboard = () => {
                      `${item.completed_assessments} assessments`}
                   </span>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <div className="text-center py-8 text-gray-500">
             No data available. Start learning to appear on the leaderboard!

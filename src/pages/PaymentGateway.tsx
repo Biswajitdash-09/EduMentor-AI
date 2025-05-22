@@ -1,274 +1,351 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, CreditCard, Smartphone, Banknote, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LoaderCircle, CreditCard, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
-type PaymentPlan = {
+interface PaymentPlan {
   id: string;
   name: string;
   price: number;
   features: string[];
-};
+}
 
 const PaymentGateway = () => {
   const { planId } = useParams<{ planId: string }>();
-  const [plan, setPlan] = useState<PaymentPlan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [paymentPlan, setPaymentPlan] = useState<PaymentPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("credit_card");
+  const [completed, setCompleted] = useState(false);
+  const [formData, setFormData] = useState({
+    cardNumber: "",
+    cardName: "",
+    expiryDate: "",
+    cvc: "",
+  });
 
   useEffect(() => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to access this page",
-        variant: "destructive",
-      });
-      navigate('/signin/student');
-      return;
-    }
-
-    fetchPlanDetails();
-  }, [planId, user]);
-
-  const fetchPlanDetails = async () => {
-    if (!planId) return;
+    const fetchPlanDetails = async () => {
+      if (!planId) return;
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("payment_plans")
+          .select("*")
+          .eq("id", planId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Parse features if they are stored as a JSON string
+          const features = Array.isArray(data.features) 
+            ? data.features 
+            : typeof data.features === 'string' 
+              ? JSON.parse(data.features) 
+              : [];
+              
+          setPaymentPlan({
+            ...data,
+            features
+          });
+        }
+      } catch (error: any) {
+        console.error("Error fetching plan details:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to load plan details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
     
+    fetchPlanDetails();
+  }, [planId, toast]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user || !paymentPlan) return;
+    
+    setProcessing(true);
     try {
-      const { data, error } = await supabase
-        .from('payment_plans')
-        .select('*')
-        .eq('id', planId)
-        .single();
+      // Simulate payment processing delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Record payment in the database
+      const { error } = await supabase
+        .from("user_payments")
+        .insert({
+          user_id: user.id,
+          plan_id: paymentPlan.id,
+          amount: paymentPlan.price,
+          payment_status: "completed",
+        });
         
       if (error) throw error;
       
-      // Convert features from JSON to string array
-      setPlan({
-        ...data,
-        features: Array.isArray(data.features) ? data.features : JSON.parse(data.features as string)
-      });
-    } catch (error) {
-      console.error('Error fetching plan details:', error);
-      toast({
-        title: "Error",
-        description: "Could not load plan details",
-        variant: "destructive",
-      });
-      navigate('/');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePayment = async () => {
-    if (!selectedMethod) {
-      toast({
-        title: "Payment method required",
-        description: "Please select a payment method",
-      });
-      return;
-    }
-    
-    if (!user || !plan) return;
-    
-    setProcessingPayment(true);
-    
-    try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Record payment in database
-      await supabase.from('user_payments').insert({
-        user_id: user.id,
-        plan_id: plan.id,
-        amount: plan.price,
-        payment_status: 'completed'
+      // Update user achievements to add points
+      await supabase.rpc('increment_user_points', {
+        user_id_param: user.id,
+        points_to_add: 50
       });
       
-      // Update user achievements with points
-      const { data } = await supabase
-        .from('user_achievements')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (data) {
-        // Update existing record
-        await supabase
-          .from('user_achievements')
-          .update({ points: data.points + 100 })
-          .eq('user_id', user.id);
-      } else {
-        // Create new record
-        await supabase
-          .from('user_achievements')
-          .insert({
-            user_id: user.id,
-            points: 100
-          });
-      }
-      
+      setCompleted(true);
       toast({
         title: "Payment Successful",
-        description: `You are now subscribed to the ${plan.name} plan`,
+        description: `You've successfully subscribed to the ${paymentPlan.name} plan.`,
       });
-      
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error processing payment:', error);
+    } catch (error: any) {
+      console.error("Payment error:", error.message);
       toast({
         title: "Payment Failed",
-        description: "There was an error processing your payment",
+        description: "There was an issue processing your payment. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setProcessingPayment(false);
+      setProcessing(false);
     }
   };
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-edu-blue" />
+        <div className="flex items-center justify-center py-12">
+          <LoaderCircle className="h-8 w-8 animate-spin text-edu-blue" />
         </div>
       </DashboardLayout>
     );
   }
 
-  if (!plan) {
+  if (!paymentPlan) {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold">Plan not found</h2>
-          <p className="text-gray-500 mt-2">The selected plan could not be found</p>
-          <Button className="mt-4" onClick={() => navigate('/')}>
-            Return Home
-          </Button>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Plan Not Found</CardTitle>
+            <CardDescription>
+              The selected plan could not be found. Please try again.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+          </CardFooter>
+        </Card>
       </DashboardLayout>
     );
   }
-
-  const paymentMethods = [
-    {
-      id: 'credit-card',
-      name: 'Credit Card',
-      icon: <CreditCard className="h-5 w-5" />,
-      description: 'Pay with Visa, Mastercard, or American Express'
-    },
-    {
-      id: 'mobile',
-      name: 'Mobile Payment',
-      icon: <Smartphone className="h-5 w-5" />,
-      description: 'Pay with Apple Pay or Google Pay'
-    },
-    {
-      id: 'bank',
-      name: 'Bank Transfer',
-      icon: <Banknote className="h-5 w-5" />,
-      description: 'Pay directly from your bank account'
-    }
-  ];
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold tracking-tight mb-6">Complete Your Payment</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Method</CardTitle>
-                <CardDescription>Select your preferred payment method</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {paymentMethods.map((method) => (
-                  <div 
-                    key={method.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      selectedMethod === method.id 
-                        ? 'border-edu-blue bg-edu-blue/5' 
-                        : 'hover:border-gray-400'
-                    }`}
-                    onClick={() => setSelectedMethod(method.id)}
-                  >
-                    <div className="flex items-center">
-                      <div className={`mr-3 p-2 rounded-full ${
-                        selectedMethod === method.id ? 'bg-edu-blue text-white' : 'bg-gray-100'
-                      }`}>
-                        {method.icon}
-                      </div>
-                      <div>
-                        <div className="font-medium">{method.name}</div>
-                        <div className="text-sm text-gray-500">{method.description}</div>
-                      </div>
+        {completed ? (
+          <Card className="border-green-500">
+            <CardHeader className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 mb-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <CardTitle>Payment Successful!</CardTitle>
+              <CardDescription>
+                Thank you for your purchase. Your subscription is now active.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-md bg-green-50 p-4">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-green-800">Order Summary</h3>
+                    <div className="mt-2 text-sm text-green-700">
+                      <ul className="list-disc space-y-1 pl-5">
+                        <li>Plan: {paymentPlan.name}</li>
+                        <li>Amount: ${paymentPlan.price.toFixed(2)}</li>
+                        <li>Status: Completed</li>
+                        <li>Bonus Points: +50</li>
+                      </ul>
                     </div>
                   </div>
-                ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button 
+                className="bg-edu-blue hover:bg-edu-blue-dark"
+                onClick={() => navigate("/dashboard")}
+              >
+                Return to Dashboard
+              </Button>
+            </CardFooter>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Details</CardTitle>
+                <CardDescription>
+                  Complete your subscription to the {paymentPlan.name} plan
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium">Payment Method</h3>
+                      <RadioGroup
+                        defaultValue="credit_card"
+                        value={paymentMethod}
+                        onValueChange={setPaymentMethod}
+                        className="mt-2 space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="credit_card" id="credit_card" />
+                          <Label htmlFor="credit_card" className="flex items-center">
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Credit or Debit Card
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {paymentMethod === "credit_card" && (
+                      <div className="space-y-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="cardName">Name on Card</Label>
+                          <Input
+                            id="cardName"
+                            name="cardName"
+                            placeholder="John Smith"
+                            required
+                            value={formData.cardName}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        
+                        <div className="grid gap-2">
+                          <Label htmlFor="cardNumber">Card Number</Label>
+                          <Input
+                            id="cardNumber"
+                            name="cardNumber"
+                            placeholder="4242 4242 4242 4242"
+                            required
+                            value={formData.cardNumber}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="expiryDate">Expiry Date</Label>
+                            <Input
+                              id="expiryDate"
+                              name="expiryDate"
+                              placeholder="MM/YY"
+                              required
+                              value={formData.expiryDate}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                          
+                          <div className="grid gap-2">
+                            <Label htmlFor="cvc">CVC</Label>
+                            <Input
+                              id="cvc"
+                              name="cvc"
+                              placeholder="123"
+                              required
+                              value={formData.cvc}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="w-full bg-edu-blue hover:bg-edu-blue-dark"
+                    disabled={processing}
+                  >
+                    {processing ? (
+                      <>
+                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Pay $${paymentPlan.price.toFixed(2)}`
+                    )}
+                  </Button>
+                </form>
               </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full bg-edu-blue hover:bg-edu-blue-dark"
-                  disabled={!selectedMethod || processingPayment}
-                  onClick={handlePayment}
-                >
-                  {processingPayment ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    `Pay $${plan.price}`
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
-          </div>
-          
-          <div>
+            
             <Card>
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
+                <CardDescription>
+                  Review your plan details before completing your purchase
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{plan.name} Plan</span>
-                  <span>${plan.price}/month</span>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium">{paymentPlan.name} Plan</h3>
+                  <p className="text-2xl font-bold mt-2">${paymentPlan.price.toFixed(2)}</p>
                 </div>
-                <div className="border-t pt-2 flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>${plan.price}</span>
+                
+                <Separator />
+                
+                <div>
+                  <h3 className="text-md font-medium mb-2">What's Included:</h3>
+                  <ul className="space-y-1">
+                    {paymentPlan.features.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+                
+                <Separator />
+                
+                <Alert>
+                  <AlertTitle>Secure Transaction</AlertTitle>
+                  <AlertDescription>
+                    Your payment information is encrypted and secure. We never store your full card details.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
-              <CardFooter className="text-sm text-gray-500">
-                <p>You will be charged ${plan.price} today and then on a monthly basis.</p>
-              </CardFooter>
             </Card>
-            
-            <div className="mt-4 text-sm text-gray-500">
-              <p className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                Secure payment
-              </p>
-              <p className="flex items-center mt-1">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                Cancel anytime
-              </p>
-            </div>
           </div>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   );

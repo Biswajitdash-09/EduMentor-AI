@@ -1,14 +1,27 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Menu, X, Award, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Add scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -19,78 +32,140 @@ const Navbar = () => {
     navigate("/");
   };
 
+  // Get appropriate dashboard link based on user type
+  const getDashboardLink = () => {
+    if (!user || !profile) return "/dashboard";
+    
+    switch (profile.user_type) {
+      case "admin":
+        return "/admin";
+      case "faculty":
+        return "/faculty";
+      default:
+        return "/student";
+    }
+  };
+
+  // Animation variants
+  const navVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.3,
+        staggerChildren: 0.1,
+        when: "beforeChildren"
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <nav className="bg-white shadow-sm py-4">
+    <motion.nav 
+      className={`fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300 ${scrolled ? 'bg-white shadow-md' : 'bg-transparent'}`}
+      initial="hidden"
+      animate="visible"
+      variants={navVariants}
+    >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        <motion.div 
+          className="flex items-center space-x-2"
+          variants={itemVariants}
+        >
           <GraduationCap className="h-8 w-8 text-edu-blue" />
           <Link to="/" className="text-2xl font-bold edu-gradient-text">
             EduMentor AI
           </Link>
-        </div>
+        </motion.div>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
-            Home
-          </Link>
-          <Link to="/features" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
-            Features
-          </Link>
-          <Link to="/about" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
-            About
-          </Link>
-          <Link to="/leaderboard" className="text-gray-700 hover:text-edu-blue font-medium transition-colors flex items-center">
-            <Award className="h-4 w-4 mr-1" />
-            Leaderboard
-          </Link>
+          <motion.div variants={itemVariants}>
+            <Link to="/" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
+              Home
+            </Link>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Link to="/features" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
+              Features
+            </Link>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Link to="/about" className="text-gray-700 hover:text-edu-blue font-medium transition-colors">
+              About
+            </Link>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Link to="/leaderboard" className="text-gray-700 hover:text-edu-blue font-medium transition-colors flex items-center">
+              <Award className="h-4 w-4 mr-1" />
+              Leaderboard
+            </Link>
+          </motion.div>
           
           {user ? (
             <>
-              <Button 
-                variant="outline" 
-                className="mr-2"
-                onClick={() => navigate("/dashboard")}
-              >
-                Dashboard
-              </Button>
-              <Button 
-                className="bg-edu-blue hover:bg-edu-blue-dark"
-                onClick={handleSignOut}
-              >
-                Sign Out
-              </Button>
+              <motion.div variants={itemVariants}>
+                <Button 
+                  variant="outline" 
+                  className="mr-2"
+                  onClick={() => navigate(getDashboardLink())}
+                >
+                  Dashboard
+                </Button>
+              </motion.div>
+              <motion.div variants={itemVariants}>
+                <Button 
+                  className="bg-edu-blue hover:bg-edu-blue-dark"
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              </motion.div>
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                className="mr-2"
-                onClick={() => navigate("/signin/student")}
-              >
-                Sign In
-              </Button>
-              <Button 
-                className="bg-edu-blue hover:bg-edu-blue-dark"
-                onClick={() => navigate("/signup/student")}
-              >
-                Sign Up
-              </Button>
+              <motion.div variants={itemVariants}>
+                <Button 
+                  variant="outline" 
+                  className="mr-2"
+                  onClick={() => navigate("/signin/student")}
+                >
+                  Sign In
+                </Button>
+              </motion.div>
+              <motion.div variants={itemVariants}>
+                <Button 
+                  className="bg-edu-blue hover:bg-edu-blue-dark"
+                  onClick={() => navigate("/signup/student")}
+                >
+                  Sign Up
+                </Button>
+              </motion.div>
             </>
           )}
         </div>
 
         {/* Mobile Menu Button */}
         <div className="md:hidden">
-          <button onClick={toggleMenu} className="text-gray-700">
+          <motion.button variants={itemVariants} onClick={toggleMenu} className="text-gray-700">
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white shadow-lg py-4 px-4 absolute top-16 left-0 w-full z-50 animate-fade-in">
+        <motion.div 
+          className="md:hidden bg-white shadow-lg py-4 px-4 absolute top-16 left-0 w-full z-50"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          transition={{ duration: 0.3 }}
+        >
           <div className="flex flex-col space-y-4">
             <Link 
               to="/" 
@@ -128,7 +203,7 @@ const Navbar = () => {
                   variant="outline" 
                   className="w-full" 
                   onClick={() => {
-                    navigate("/dashboard");
+                    navigate(getDashboardLink());
                     toggleMenu();
                   }}
                 >
@@ -168,9 +243,9 @@ const Navbar = () => {
               </>
             )}
           </div>
-        </div>
+        </motion.div>
       )}
-    </nav>
+    </motion.nav>
   );
 };
 

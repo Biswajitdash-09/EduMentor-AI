@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -14,9 +14,15 @@ import {
   MessageSquare,
   Settings,
   User,
+  Users,
+  BarChart,
+  FileText,
+  BellRing,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { motion } from "framer-motion";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -51,26 +57,69 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     return location.pathname === path;
   };
 
-  const navItems = [
-    { name: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/dashboard" },
-    { name: "Courses", icon: <BookOpen className="h-5 w-5" />, href: "/courses" },
-    { name: "Assessments", icon: <ListChecks className="h-5 w-5" />, href: "/assessments" },
-    { name: "AI Tutor", icon: <MessageSquare className="h-5 w-5" />, href: "/ai-tutor" },
-    { name: "Risk Analysis", icon: <AlertTriangle className="h-5 w-5" />, href: "/risk-analysis" },
-    { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
-    { name: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
-  ];
-  
-  // Filter out Risk Analysis for students
-  const filteredNavItems = userType === "student" 
-    ? navItems.filter(item => item.name !== "Risk Analysis") 
-    : navItems;
+  // Define navigation items based on user type
+  const getNavItems = () => {
+    const studentNavItems = [
+      { name: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/student" },
+      { name: "Courses", icon: <BookOpen className="h-5 w-5" />, href: "/courses" },
+      { name: "Assessments", icon: <ListChecks className="h-5 w-5" />, href: "/assessments" },
+      { name: "AI Tutor", icon: <MessageSquare className="h-5 w-5" />, href: "/ai-tutor" },
+      { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
+      { name: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+    ];
+
+    const facultyNavItems = [
+      { name: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/faculty" },
+      { name: "Courses", icon: <BookOpen className="h-5 w-5" />, href: "/faculty?tab=courses" },
+      { name: "Students", icon: <Users className="h-5 w-5" />, href: "/faculty?tab=students" },
+      { name: "Assignments", icon: <ListChecks className="h-5 w-5" />, href: "/faculty?tab=assignments" },
+      { name: "Announcements", icon: <BellRing className="h-5 w-5" />, href: "/faculty?tab=announcements" },
+      { name: "Risk Analysis", icon: <AlertTriangle className="h-5 w-5" />, href: "/risk-analysis" },
+      { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
+      { name: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+    ];
+
+    const adminNavItems = [
+      { name: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/admin" },
+      { name: "User Management", icon: <UserCog className="h-5 w-5" />, href: "/admin?tab=user-management" },
+      { name: "Site Settings", icon: <Settings className="h-5 w-5" />, href: "/admin?tab=site-settings" },
+      { name: "Analytics", icon: <BarChart className="h-5 w-5" />, href: "/admin?tab=analytics" },
+      { name: "Audit Logs", icon: <FileText className="h-5 w-5" />, href: "/admin?tab=audit-logs" },
+      { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
+    ];
+
+    switch (userType) {
+      case "faculty":
+        return facultyNavItems;
+      case "admin":
+        return adminNavItems;
+      default:
+        return studentNavItems;
+    }
+  };
+
+  const navItems = getNavItems();
+
+  // Animation variants
+  const sidebarVariants = {
+    open: {
+      width: "16rem",
+      transition: { duration: 0.3, ease: "easeInOut" }
+    },
+    closed: {
+      width: "4.5rem",
+      transition: { duration: 0.3, ease: "easeInOut" }
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar for desktop */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-10 w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+      <motion.aside
+        initial={false}
+        animate={isSidebarOpen ? "open" : "closed"}
+        variants={sidebarVariants}
+        className={`fixed inset-y-0 left-0 z-10 transform bg-white shadow-lg transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } ${isMobileMenuOpen ? "block lg:hidden" : "hidden lg:block"}`}
       >
@@ -78,7 +127,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="flex items-center justify-between p-4 border-b">
             <Link to="/" className="flex items-center space-x-2">
               <GraduationCap className="h-7 w-7 text-edu-blue" />
-              <span className="text-xl font-bold edu-gradient-text">EduMentor AI</span>
+              {isSidebarOpen && (
+                <span className="text-xl font-bold edu-gradient-text">EduMentor AI</span>
+              )}
             </Link>
             <button
               onClick={toggleMobileMenu}
@@ -90,20 +141,23 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           
           <div className="flex flex-col justify-between h-full overflow-y-auto pb-4">
             <nav className="mt-6 px-4 space-y-1">
-              {filteredNavItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center px-4 py-3 text-gray-700 rounded-lg transition-colors ${
-                    isActive(item.href)
-                      ? "bg-edu-blue/10 text-edu-blue font-medium"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <span className={isActive(item.href) ? "text-edu-blue" : ""}>{item.icon}</span>
-                  <span className="ml-3">{item.name}</span>
-                </Link>
-              ))}
+              {navItems.map((item) => {
+                const isItemActive = isActive(item.href.split("?")[0]);
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`flex items-center px-4 py-3 text-gray-700 rounded-lg transition-colors ${
+                      isItemActive
+                        ? "bg-edu-blue/10 text-edu-blue font-medium"
+                        : "hover:bg-gray-100"
+                    }`}
+                  >
+                    <span className={isItemActive ? "text-edu-blue" : ""}>{item.icon}</span>
+                    {isSidebarOpen && <span className="ml-3">{item.name}</span>}
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="px-4 mt-4">
@@ -113,12 +167,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                {isSidebarOpen && "Sign Out"}
               </Button>
             </div>
           </div>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -129,6 +183,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <button
                 onClick={toggleMobileMenu}
                 className="lg:hidden text-gray-500 hover:text-gray-900 mr-4"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <button
+                onClick={toggleSidebar}
+                className="hidden lg:block text-gray-500 hover:text-gray-900 mr-4"
               >
                 <Menu className="h-6 w-6" />
               </button>
@@ -154,7 +214,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </header>
 
         {/* Main content area */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {children}
+          </motion.div>
+        </main>
       </div>
 
       {/* Overlay for mobile sidebar */}
