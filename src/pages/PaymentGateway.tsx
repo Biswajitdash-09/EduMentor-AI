@@ -59,15 +59,15 @@ const PaymentGateway = () => {
           
           if (Array.isArray(data.features)) {
             // If features is already an array
-            parsedFeatures = data.features.map(feature => String(feature));
+            parsedFeatures = data.features.map((feature: any) => String(feature));
           } else if (typeof data.features === 'string') {
             // If features is a JSON string
             try {
               const parsed = JSON.parse(data.features);
               if (Array.isArray(parsed)) {
-                parsedFeatures = parsed.map(feature => String(feature));
+                parsedFeatures = parsed.map((feature: any) => String(feature));
               } else if (parsed && typeof parsed === 'object') {
-                parsedFeatures = Object.values(parsed).map(item => String(item));
+                parsedFeatures = Object.values(parsed).map((item: any) => String(item));
               } else {
                 parsedFeatures = [String(parsed)];
               }
@@ -77,7 +77,9 @@ const PaymentGateway = () => {
             }
           } else if (data.features && typeof data.features === 'object') {
             // If features is an object
-            parsedFeatures = Object.values(data.features).map(item => String(item));
+            // Explicitly type the object values as any before mapping to string
+            const featureValues: any[] = Object.values(data.features as Record<string, any>);
+            parsedFeatures = featureValues.map(item => String(item));
           }
               
           setPaymentPlan({
