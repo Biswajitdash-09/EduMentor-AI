@@ -11,6 +11,7 @@ import { BookOpen, ListChecks, MessageSquare, Loader2, Award, Trophy, Users } fr
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PaymentPlans from "@/components/PaymentPlans";
+import { Json } from "@/integrations/supabase/types";
 
 type UserAchievement = {
   points: number;
@@ -72,7 +73,20 @@ const Dashboard = () => {
           
         setAchievements(defaultAchievement);
       } else {
-        setAchievements(data);
+        // Convert the badges from Json to string[]
+        const parsedBadges: string[] = Array.isArray(data.badges) 
+          ? data.badges as string[]
+          : typeof data.badges === 'string' 
+            ? JSON.parse(data.badges) 
+            : [];
+
+        setAchievements({
+          points: data.points,
+          completed_courses: data.completed_courses,
+          completed_assessments: data.completed_assessments,
+          badges: parsedBadges,
+          last_activity: data.last_activity
+        });
       }
       
       // Get user rank

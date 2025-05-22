@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Medal, Star, Award, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 type LeaderboardUser = {
   user_id: string;
@@ -54,8 +55,21 @@ const Leaderboard = () => {
       // Combine data and add rank
       const combinedData = achievementsData.map((achievement, index) => {
         const profile = profilesData.find(p => p.id === achievement.user_id);
-        // Parse badges from JSON to string array
-        const parsedBadges = Array.isArray(achievement.badges) ? achievement.badges : JSON.parse(achievement.badges as string);
+        
+        // Ensure badges is properly parsed as string array
+        let parsedBadges: string[] = [];
+        if (achievement.badges) {
+          if (Array.isArray(achievement.badges)) {
+            parsedBadges = achievement.badges as string[];
+          } else if (typeof achievement.badges === 'string') {
+            try {
+              parsedBadges = JSON.parse(achievement.badges);
+            } catch (e) {
+              console.error('Error parsing badges:', e);
+              parsedBadges = [];
+            }
+          }
+        }
         
         return {
           ...achievement,
