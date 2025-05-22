@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,31 +54,38 @@ const PaymentGateway = () => {
         if (error) throw error;
         
         if (data) {
-          // Explicitly define parsedFeatures as string array
-          let parsedFeatures: string[] = [];
+          // Create an empty string array for features
+          const parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
             // If features is already an array
-            parsedFeatures = data.features.map((feature: any) => String(feature));
+            data.features.forEach((feature: any) => {
+              parsedFeatures.push(String(feature));
+            });
           } else if (typeof data.features === 'string') {
             // If features is a JSON string
             try {
               const parsed = JSON.parse(data.features);
               if (Array.isArray(parsed)) {
-                parsedFeatures = parsed.map((feature: any) => String(feature));
+                parsed.forEach((feature: any) => {
+                  parsedFeatures.push(String(feature));
+                });
               } else if (parsed && typeof parsed === 'object') {
-                parsedFeatures = Object.values(parsed).map((item: any) => String(item));
+                Object.values(parsed).forEach((item: any) => {
+                  parsedFeatures.push(String(item));
+                });
               } else {
-                parsedFeatures = [String(parsed)];
+                parsedFeatures.push(String(parsed));
               }
             } catch (e) {
               console.error("Error parsing features string:", e);
-              parsedFeatures = [String(data.features)];
+              parsedFeatures.push(String(data.features));
             }
           } else if (data.features && typeof data.features === 'object') {
             // If features is an object
-            const featureValues = Object.values(data.features as Record<string, any>);
-            parsedFeatures = featureValues.map((item: any) => String(item));
+            Object.values(data.features as Record<string, any>).forEach((item: any) => {
+              parsedFeatures.push(String(item));
+            });
           }
               
           setPaymentPlan({
