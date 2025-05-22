@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,19 +58,19 @@ const PaymentGateway = () => {
           let parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
-            parsedFeatures = data.features.map(feature => String(feature));
+            parsedFeatures = data.features.map((feature: any) => String(feature));
           } else if (typeof data.features === 'string') {
             try {
-              parsedFeatures = JSON.parse(data.features);
+              const parsed = JSON.parse(data.features);
               // Ensure each feature is a string
-              parsedFeatures = parsedFeatures.map((feature: any) => String(feature));
+              parsedFeatures = Array.isArray(parsed) ? parsed.map((feature: any) => String(feature)) : [String(parsed)];
             } catch (e) {
               console.error("Error parsing features string:", e);
               parsedFeatures = [String(data.features)]; // Fallback to treating it as a single feature
             }
           } else if (data.features && typeof data.features === 'object') {
             // If it's already a parsed JSON object from Supabase
-            parsedFeatures = Object.values(data.features).map((item: any) => String(item));
+            parsedFeatures = Object.values(data.features as Record<string, any>).map((item: any) => String(item));
           }
               
           setPaymentPlan({
