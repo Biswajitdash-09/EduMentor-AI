@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BarChart,
+  BarChart as BarChartIcon,
   Download,
   Users,
   BookOpen,
@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
-  BarChart as RechartsBarChart,
+  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -77,7 +77,7 @@ const AdminAnalytics = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <div>
           <h2 className="text-2xl font-bold flex items-center">
-            <BarChart className="mr-2 h-6 w-6" />
+            <BarChartIcon className="mr-2 h-6 w-6" />
             Analytics & Reports
           </h2>
           <p className="text-gray-500">
@@ -258,8 +258,8 @@ const AdminAnalytics = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="students" stackId="a" fill="#4F46E5" name="Students Enrolled" />
-                <Bar dataKey="completed" stackId="b" fill="#8B5CF6" name="Completed Course" />
+                <Bar dataKey="students" fill="#4F46E5" name="Students Enrolled" />
+                <Bar dataKey="completed" fill="#8B5CF6" name="Completed Course" />
               </BarChart>
             </ResponsiveContainer>
           </div>
