@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,17 +57,19 @@ const PaymentGateway = () => {
           let parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
-            parsedFeatures = data.features as string[];
+            parsedFeatures = data.features.map(feature => String(feature));
           } else if (typeof data.features === 'string') {
             try {
               parsedFeatures = JSON.parse(data.features);
+              // Ensure each feature is a string
+              parsedFeatures = parsedFeatures.map((feature: any) => String(feature));
             } catch (e) {
               console.error("Error parsing features string:", e);
-              parsedFeatures = [data.features]; // Fallback to treating it as a single feature
+              parsedFeatures = [String(data.features)]; // Fallback to treating it as a single feature
             }
           } else if (data.features && typeof data.features === 'object') {
             // If it's already a parsed JSON object from Supabase
-            parsedFeatures = Object.values(data.features).map(item => String(item));
+            parsedFeatures = Object.values(data.features).map((item: any) => String(item));
           }
               
           setPaymentPlan({
@@ -193,8 +194,8 @@ const PaymentGateway = () => {
                     <h3 className="text-sm font-medium text-green-800">Order Summary</h3>
                     <div className="mt-2 text-sm text-green-700">
                       <ul className="list-disc space-y-1 pl-5">
-                        <li>Plan: {paymentPlan.name}</li>
-                        <li>Amount: ${paymentPlan.price.toFixed(2)}</li>
+                        <li>Plan: {paymentPlan?.name}</li>
+                        <li>Amount: ${paymentPlan?.price.toFixed(2)}</li>
                         <li>Status: Completed</li>
                         <li>Bonus Points: +50</li>
                       </ul>
@@ -218,7 +219,7 @@ const PaymentGateway = () => {
               <CardHeader>
                 <CardTitle>Payment Details</CardTitle>
                 <CardDescription>
-                  Complete your subscription to the {paymentPlan.name} plan
+                  Complete your subscription to the {paymentPlan?.name} plan
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -310,7 +311,7 @@ const PaymentGateway = () => {
                         Processing...
                       </>
                     ) : (
-                      `Pay $${paymentPlan.price.toFixed(2)}`
+                      `Pay $${paymentPlan?.price.toFixed(2)}`
                     )}
                   </Button>
                 </form>
@@ -326,8 +327,8 @@ const PaymentGateway = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium">{paymentPlan.name} Plan</h3>
-                  <p className="text-2xl font-bold mt-2">${paymentPlan.price.toFixed(2)}</p>
+                  <h3 className="text-lg font-medium">{paymentPlan?.name} Plan</h3>
+                  <p className="text-2xl font-bold mt-2">${paymentPlan?.price.toFixed(2)}</p>
                 </div>
                 
                 <Separator />
@@ -335,7 +336,7 @@ const PaymentGateway = () => {
                 <div>
                   <h3 className="text-md font-medium mb-2">What's Included:</h3>
                   <ul className="space-y-1">
-                    {paymentPlan.features.map((feature, index) => (
+                    {paymentPlan?.features?.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                         <span>{feature}</span>
