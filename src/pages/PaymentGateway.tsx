@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LoaderCircle, CreditCard, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface PaymentPlan {
   id: string;
@@ -58,14 +58,14 @@ const PaymentGateway = () => {
           let parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
-            // If features is already an array, ensure each element is a string
-            parsedFeatures = data.features.map((feature: any) => String(feature));
+            // If features is already an array
+            parsedFeatures = data.features.map(feature => String(feature));
           } else if (typeof data.features === 'string') {
-            // If features is a JSON string, parse it
+            // If features is a JSON string
             try {
               const parsed = JSON.parse(data.features);
               if (Array.isArray(parsed)) {
-                parsedFeatures = parsed.map((feature: any) => String(feature));
+                parsedFeatures = parsed.map(feature => String(feature));
               } else if (parsed && typeof parsed === 'object') {
                 parsedFeatures = Object.values(parsed).map(item => String(item));
               } else {
@@ -73,12 +73,11 @@ const PaymentGateway = () => {
               }
             } catch (e) {
               console.error("Error parsing features string:", e);
-              parsedFeatures = [String(data.features)]; // Fallback to treating it as a single feature
+              parsedFeatures = [String(data.features)];
             }
           } else if (data.features && typeof data.features === 'object') {
-            // If features is already a parsed object from Supabase
-            const values = Object.values(data.features as Record<string, any>);
-            parsedFeatures = values.map(item => String(item));
+            // If features is an object
+            parsedFeatures = Object.values(data.features).map(item => String(item));
           }
               
           setPaymentPlan({
