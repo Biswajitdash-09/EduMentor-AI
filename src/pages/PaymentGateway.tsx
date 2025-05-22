@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +17,7 @@ interface PaymentPlan {
   id: string;
   name: string;
   price: number;
-  features: string[];
+  features: string[]; // Explicitly defined as string array
 }
 
 const PaymentGateway = () => {
@@ -55,7 +54,7 @@ const PaymentGateway = () => {
         
         if (data) {
           // Parse features properly based on the data type
-          let parsedFeatures: string[] = [];
+          let parsedFeatures: string[] = []; // Type annotation added here
           
           if (Array.isArray(data.features)) {
             parsedFeatures = data.features.map((feature: any) => String(feature));
@@ -69,10 +68,8 @@ const PaymentGateway = () => {
               parsedFeatures = [String(data.features)]; // Fallback to treating it as a single feature
             }
           } else if (data.features && typeof data.features === 'object') {
-            // If it's already a parsed JSON object from Supabase
-            // Convert object values to an array of strings, ensuring each item is a string
-            const values = Object.values(data.features as Record<string, unknown>);
-            parsedFeatures = values.map(item => String(item));
+            // If it's already a parsed JSON object from Supabase, convert to string array
+            parsedFeatures = Object.values(data.features as Record<string, unknown>).map(item => String(item));
           }
               
           setPaymentPlan({
