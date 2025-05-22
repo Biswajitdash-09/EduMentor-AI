@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +18,7 @@ interface PaymentPlan {
   id: string;
   name: string;
   price: number;
-  features: string[]; // Explicitly defined as string array
+  features: string[];
 }
 
 const PaymentGateway = () => {
@@ -54,22 +55,30 @@ const PaymentGateway = () => {
         
         if (data) {
           // Parse features properly based on the data type
-          let parsedFeatures: string[] = []; // Type annotation added here
+          let parsedFeatures: string[] = [];
           
           if (Array.isArray(data.features)) {
+            // If features is already an array, ensure each element is a string
             parsedFeatures = data.features.map((feature: any) => String(feature));
           } else if (typeof data.features === 'string') {
+            // If features is a JSON string, parse it
             try {
               const parsed = JSON.parse(data.features);
-              // Ensure each feature is a string
-              parsedFeatures = Array.isArray(parsed) ? parsed.map((feature: any) => String(feature)) : [String(parsed)];
+              if (Array.isArray(parsed)) {
+                parsedFeatures = parsed.map((feature: any) => String(feature));
+              } else if (parsed && typeof parsed === 'object') {
+                parsedFeatures = Object.values(parsed).map(item => String(item));
+              } else {
+                parsedFeatures = [String(parsed)];
+              }
             } catch (e) {
               console.error("Error parsing features string:", e);
               parsedFeatures = [String(data.features)]; // Fallback to treating it as a single feature
             }
           } else if (data.features && typeof data.features === 'object') {
-            // If it's already a parsed JSON object from Supabase, convert to string array
-            parsedFeatures = Object.values(data.features as Record<string, unknown>).map(item => String(item));
+            // If features is already a parsed object from Supabase
+            const values = Object.values(data.features as Record<string, any>);
+            parsedFeatures = values.map(item => String(item));
           }
               
           setPaymentPlan({
