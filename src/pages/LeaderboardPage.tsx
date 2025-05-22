@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Leaderboard from "@/components/Leaderboard";
@@ -7,15 +7,69 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, Target, User, Users } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import VisitorCounter from "@/components/VisitorCounter";
+
+type UserAchievement = {
+  points: number;
+  completed_courses: number;
+  completed_assessments: number;
+  badges: string[];
+}
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
+  const [userStats, setUserStats] = useState<UserAchievement>({
+    points: 0,
+    completed_courses: 0,
+    completed_assessments: 0,
+    badges: []
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchUserStats();
+    }
+  }, [user]);
+
+  const fetchUserStats = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_achievements')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching user stats:', error);
+        return;
+      }
+      
+      if (data) {
+        // Parse badges from JSON if needed
+        const badges = Array.isArray(data.badges) ? data.badges : JSON.parse(data.badges as string);
+        setUserStats({
+          points: data.points,
+          completed_courses: data.completed_courses,
+          completed_assessments: data.completed_assessments,
+          badges: badges
+        });
+      }
+    } catch (error) {
+      console.error('Error processing user stats:', error);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <div className="container mx-auto px-4 py-8 flex-grow">
-        <h1 className="text-3xl font-bold mb-2">Leaderboard & Achievements</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Leaderboard & Achievements</h1>
+          <VisitorCounter />
+        </div>
         <p className="text-gray-500 mb-8">
           Compare your progress with other students and earn badges as you learn.
         </p>
@@ -41,8 +95,8 @@ const LeaderboardPage = () => {
                         <div className="text-sm text-gray-500">Complete your first course</div>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-gray-100">
-                      0/1
+                    <Badge variant="outline" className={`${userStats.completed_courses > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+                      {userStats.completed_courses > 0 ? 'Completed' : '0/1'}
                     </Badge>
                   </div>
                   
@@ -90,19 +144,23 @@ const LeaderboardPage = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Points earned:</span>
-                    <span className="font-medium">0 pts</span>
+                    <span className="font-medium">{userStats.points} pts</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Courses completed:</span>
-                    <span className="font-medium">0</span>
+                    <span className="font-medium">{userStats.completed_courses}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Assessments taken:</span>
-                    <span className="font-medium">0</span>
+                    <span className="font-medium">{userStats.completed_assessments}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Current rank:</span>
-                    <span className="font-medium">Beginner</span>
+                    <span className="font-medium">
+                      {userStats.points >= 500 ? 'Expert' : 
+                       userStats.points >= 250 ? 'Advanced' :
+                       userStats.points >= 100 ? 'Intermediate' : 'Beginner'}
+                    </span>
                   </div>
                 </div>
               </CardContent>

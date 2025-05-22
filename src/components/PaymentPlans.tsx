@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, X } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +35,13 @@ const PaymentPlans = () => {
         
       if (error) throw error;
       
-      setPlans(data);
+      // Convert features from JSON to string array for each plan
+      const formattedPlans = data.map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features : JSON.parse(plan.features as string)
+      }));
+      
+      setPlans(formattedPlans as PaymentPlan[]);
     } catch (error) {
       console.error('Error fetching payment plans:', error);
     } finally {

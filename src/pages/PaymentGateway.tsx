@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CreditCard, Smartphone, Banknote } from "lucide-react";
+import { Loader2, CreditCard, Smartphone, Banknote, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -52,7 +52,11 @@ const PaymentGateway = () => {
         
       if (error) throw error;
       
-      setPlan(data);
+      // Convert features from JSON to string array
+      setPlan({
+        ...data,
+        features: Array.isArray(data.features) ? data.features : JSON.parse(data.features as string)
+      });
     } catch (error) {
       console.error('Error fetching plan details:', error);
       toast({

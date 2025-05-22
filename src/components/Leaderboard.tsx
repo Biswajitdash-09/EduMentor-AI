@@ -23,7 +23,7 @@ type LeaderboardUser = {
 const Leaderboard = () => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rankType, setRankType] = useState<"points" | "courses" | "assessments">("points");
+  const [rankType, setRankType] = useState<"points" | "completed_courses" | "completed_assessments">("points");
   const { user } = useAuth();
   
   useEffect(() => {
@@ -54,8 +54,12 @@ const Leaderboard = () => {
       // Combine data and add rank
       const combinedData = achievementsData.map((achievement, index) => {
         const profile = profilesData.find(p => p.id === achievement.user_id);
+        // Parse badges from JSON to string array
+        const parsedBadges = Array.isArray(achievement.badges) ? achievement.badges : JSON.parse(achievement.badges as string);
+        
         return {
           ...achievement,
+          badges: parsedBadges,
           rank: index + 1,
           first_name: profile?.first_name || 'Anonymous',
           last_name: profile?.last_name || 'User',
@@ -63,7 +67,7 @@ const Leaderboard = () => {
         };
       });
       
-      setLeaderboardData(combinedData);
+      setLeaderboardData(combinedData as LeaderboardUser[]);
     } catch (error) {
       console.error('Error fetching leaderboard data:', error);
     } finally {
@@ -87,7 +91,7 @@ const Leaderboard = () => {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Leaderboard</span>
-          <Tabs value={rankType} onValueChange={(value) => setRankType(value as "points" | "courses" | "assessments")}>
+          <Tabs value={rankType} onValueChange={(value) => setRankType(value as "points" | "completed_courses" | "completed_assessments")}>
             <TabsList>
               <TabsTrigger value="points">Points</TabsTrigger>
               <TabsTrigger value="completed_courses">Courses</TabsTrigger>
