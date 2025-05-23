@@ -1,9 +1,16 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,21 +26,22 @@ interface PaymentPlan {
   features: string[];
 }
 
-const PaymentGateway = () => {
-  const { planId } = useParams<{ planId: string }>();
+const PaymentGateway: React.FC = () => {
+  const { planId } = useParams<{ planId?: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
 
+  // Fetch plan details from Supabase
   useEffect(() => {
     const fetchPlanDetails = async () => {
       if (!planId) return;
-      
+
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -41,52 +49,33 @@ const PaymentGateway = () => {
           .select("*")
           .eq("id", planId)
           .single();
-          
-        if (error) throw error;
-        
-        if (data) {
-          // Initialize features as an empty string array with proper typing
-          const parsedFeatures: string[] = [];
-          
-          // Handle features based on its format
-          if (Array.isArray(data.features)) {
-            // If features is already an array, convert each element to string
-            data.features.forEach((feature: any) => {
-              parsedFeatures.push(String(feature));
-            });
-          } else if (typeof data.features === 'string') {
-            // If features is a JSON string
-            try {
-              const parsed = JSON.parse(data.features);
-              if (Array.isArray(parsed)) {
-                parsed.forEach((feature: any) => {
-                  parsedFeatures.push(String(feature));
-                });
-              } else if (parsed && typeof parsed === 'object') {
-                Object.values(parsed).forEach((feature: any) => {
-                  parsedFeatures.push(String(feature));
-                });
-              } else {
-                parsedFeatures.push(String(parsed));
-              }
-            } catch (e) {
-              console.error("Error parsing features string:", e);
-              parsedFeatures.push(String(data.features));
+
+        if (error || !data) throw error || new Error("No plan data found");
+
+        const parsedFeatures: string[] = [];
+
+        if (Array.isArray(data.features)) {
+          data.features.forEach((f: any) => parsedFeatures.push(String(f)));
+        } else if (typeof data.features === "string") {
+          try {
+            const parsed = JSON.parse(data.features);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((f: any) => parsedFeatures.push(String(f)));
+            } else if (parsed && typeof parsed === "object") {
+              Object.values(parsed).forEach((f: any) => parsedFeatures.push(String(f)));
+            } else {
+              parsedFeatures.push(String(parsed));
             }
-          } else if (data.features && typeof data.features === 'object') {
-            // If features is an object
-            Object.values(data.features as Record<string, any>).forEach((feature: any) => {
-              parsedFeatures.push(String(feature));
-            });
+          } catch {
+            parsedFeatures.push(String(data.features));
           }
-              
-          setPaymentPlan({
-            ...data,
-            features: parsedFeatures
-          } as PaymentPlan);
+        } else if (data.features && typeof data.features === "object") {
+          Object.values(data.features).forEach((f: any) => parsedFeatures.push(String(f)));
         }
+
+        setPaymentPlan({ ...data, features: parsedFeatures });
       } catch (error: any) {
-        console.error("Error fetching plan details:", error.message);
+        console.error("Error fetching plan details:", error);
         toast({
           title: "Error",
           description: "Failed to load plan details. Please try again.",
@@ -96,43 +85,40 @@ const PaymentGateway = () => {
         setLoading(false);
       }
     };
-    
+
     fetchPlanDetails();
   }, [planId, toast]);
 
+  // Handle payment form submission
   const handlePaymentSubmit = async (formData: PaymentFormData) => {
     if (!user || !paymentPlan) return;
-    
+
     setProcessing(true);
     try {
-      // Simulate payment processing delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      // Record payment in the database
-      const { error } = await supabase
-        .from("user_payments")
-        .insert({
-          user_id: user.id,
-          plan_id: paymentPlan.id,
-          amount: paymentPlan.price,
-          payment_status: "completed",
-        });
-        
-      if (error) throw error;
-      
-      // Update user achievements to add points
-      await supabase.rpc('increment_user_points', {
-        user_id_param: user.id,
-        points_to_add: 50
+      // Simulate delay
+      await new Promise((res) => setTimeout(res, 2000));
+
+      const { error } = await supabase.from("user_payments").insert({
+        user_id: user.id,
+        plan_id: paymentPlan.id,
+        amount: paymentPlan.price,
+        payment_status: "completed",
       });
-      
+
+      if (error) throw error;
+
+      await supabase.rpc("increment_user_points", {
+        user_id_param: user.id,
+        points_to_add: 50,
+      });
+
       setCompleted(true);
       toast({
         title: "Payment Successful",
         description: `You've successfully subscribed to the ${paymentPlan.name} plan.`,
       });
     } catch (error: any) {
-      console.error("Payment error:", error.message);
+      console.error("Payment error:", error);
       toast({
         title: "Payment Failed",
         description: "There was an issue processing your payment. Please try again.",
@@ -143,6 +129,7 @@ const PaymentGateway = () => {
     }
   };
 
+  // Render loading spinner
   if (loading) {
     return (
       <DashboardLayout>
@@ -153,6 +140,7 @@ const PaymentGateway = () => {
     );
   }
 
+  // Render error if plan not found
   if (!paymentPlan) {
     return (
       <DashboardLayout>
@@ -171,6 +159,7 @@ const PaymentGateway = () => {
     );
   }
 
+  // Main content
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
@@ -182,18 +171,17 @@ const PaymentGateway = () => {
               <CardHeader>
                 <CardTitle>Payment Details</CardTitle>
                 <CardDescription>
-                  Complete your subscription to the {paymentPlan?.name} plan
+                  Complete your subscription to the {paymentPlan.name} plan.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PaymentForm 
+                <PaymentForm
                   paymentPlan={paymentPlan}
                   processing={processing}
                   onSubmit={handlePaymentSubmit}
                 />
               </CardContent>
             </Card>
-            
             <OrderSummary paymentPlan={paymentPlan} />
           </div>
         )}
