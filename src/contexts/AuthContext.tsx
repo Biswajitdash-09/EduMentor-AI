@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,14 +31,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        // Defer Supabase calls with setTimeout
+        // Defer Supabase calls with setTimeout to prevent deadlocks
         if (newSession?.user) {
           setTimeout(() => {
             fetchProfile(newSession.user.id);
-          }, 0);
+          }, 100);
         } else {
           setProfile(null);
         }
+        
+        // Set loading to false after handling auth state change
+        setLoading(false);
       }
     );
 
@@ -50,8 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (currentSession?.user) {
         fetchProfile(currentSession.user.id);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -65,15 +68,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle no rows gracefully
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         throw error;
       }
 
       setProfile(data);
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
+      setProfile(null);
+    } finally {
+      setLoading(false);
     }
   };
 
