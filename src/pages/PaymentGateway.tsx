@@ -19,11 +19,50 @@ import PaymentForm, { PaymentFormData } from "@/components/payment/PaymentForm";
 import OrderSummary from "@/components/payment/OrderSummary";
 import PaymentSuccess from "@/components/payment/PaymentSuccess";
 
+// Define interfaces for better type safety
 interface PaymentPlan {
   id: string;
   name: string;
   price: number;
   features: string[];
+}
+
+// Raw response type from Supabase
+interface RawPaymentPlan {
+  id: string;
+  name: string;
+  price: number;
+  features: any; // Can be string, array, or object
+}
+
+/**
+ * Helper function to convert any feature format to string array
+ */
+function parseFeatures(featuresData: any): string[] {
+  // If it's already an array, convert all items to strings
+  if (Array.isArray(featuresData)) {
+    return featuresData.map(item => String(item));
+  }
+  
+  // If it's a string, try to parse it as JSON
+  if (typeof featuresData === "string") {
+    try {
+      const parsed = JSON.parse(featuresData);
+      // Recursively parse the result
+      return parseFeatures(parsed);
+    } catch {
+      // If parsing fails, treat it as a single string feature
+      return [String(featuresData)];
+    }
+  }
+  
+  // If it's an object, convert all values to strings
+  if (featuresData && typeof featuresData === "object") {
+    return Object.values(featuresData).map(item => String(item));
+  }
+  
+  // Fallback: convert to string and return as single item array
+  return [String(featuresData || "")];
 }
 
 const PaymentGateway: React.FC = () => {
@@ -51,31 +90,16 @@ const PaymentGateway: React.FC = () => {
           .single();
 
         if (error || !data) throw error || new Error("No plan data found");
-
-        let parsedFeatures: string[] = [];
-
-        if (Array.isArray(data.features)) {
-          parsedFeatures = data.features.map((f: any) => String(f));
-        } else if (typeof data.features === "string") {
-          try {
-            const parsed = JSON.parse(data.features);
-            if (Array.isArray(parsed)) {
-              parsedFeatures = parsed.map((f: any) => String(f));
-            } else if (parsed && typeof parsed === "object") {
-              // Explicitly cast Object.values to any[] before mapping
-              parsedFeatures = Array.from(Object.values(parsed as Record<string, any>)).map(f => String(f));
-            } else {
-              parsedFeatures = [String(parsed)];
-            }
-          } catch {
-            parsedFeatures = [String(data.features)];
-          }
-        } else if (data.features && typeof data.features === "object") {
-          // Explicitly cast Object.values to any[] before mapping
-          parsedFeatures = Array.from(Object.values(data.features as Record<string, any>)).map(f => String(f));
-        }
-
-        setPaymentPlan({ ...data, features: parsedFeatures });
+        
+        // Use our helper function to parse features consistently
+        const parsedFeatures = parseFeatures(data.features);
+        
+        setPaymentPlan({ 
+          id: data.id, 
+          name: data.name, 
+          price: data.price, 
+          features: parsedFeatures 
+        });
       } catch (error: any) {
         console.error("Error fetching plan details:", error);
         toast({
