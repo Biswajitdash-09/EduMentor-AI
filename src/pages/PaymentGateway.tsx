@@ -52,25 +52,25 @@ const PaymentGateway: React.FC = () => {
 
         if (error || !data) throw error || new Error("No plan data found");
 
-        const parsedFeatures: string[] = [];
+        let parsedFeatures: string[] = [];
 
         if (Array.isArray(data.features)) {
-          data.features.forEach((f: any) => parsedFeatures.push(String(f)));
+          parsedFeatures = data.features.map((f: any) => String(f));
         } else if (typeof data.features === "string") {
           try {
             const parsed = JSON.parse(data.features);
             if (Array.isArray(parsed)) {
-              parsed.forEach((f: any) => parsedFeatures.push(String(f)));
+              parsedFeatures = parsed.map((f: any) => String(f));
             } else if (parsed && typeof parsed === "object") {
-              Object.values(parsed).forEach((f: any) => parsedFeatures.push(String(f)));
+              parsedFeatures = Object.values(parsed).map((f: any) => String(f));
             } else {
-              parsedFeatures.push(String(parsed));
+              parsedFeatures = [String(parsed)];
             }
           } catch {
-            parsedFeatures.push(String(data.features));
+            parsedFeatures = [String(data.features)];
           }
         } else if (data.features && typeof data.features === "object") {
-          Object.values(data.features).forEach((f: any) => parsedFeatures.push(String(f)));
+          parsedFeatures = Object.values(data.features).map((f: any) => String(f));
         }
 
         setPaymentPlan({ ...data, features: parsedFeatures });
