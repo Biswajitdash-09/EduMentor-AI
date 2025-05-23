@@ -62,7 +62,8 @@ const PaymentGateway: React.FC = () => {
             if (Array.isArray(parsed)) {
               parsedFeatures = parsed.map((f: any) => String(f));
             } else if (parsed && typeof parsed === "object") {
-              parsedFeatures = (Object.values(parsed) as any[]).map((f: any) => String(f));
+              // Explicitly cast Object.values to any[] before mapping
+              parsedFeatures = Array.from(Object.values(parsed as Record<string, any>)).map(f => String(f));
             } else {
               parsedFeatures = [String(parsed)];
             }
@@ -70,7 +71,8 @@ const PaymentGateway: React.FC = () => {
             parsedFeatures = [String(data.features)];
           }
         } else if (data.features && typeof data.features === "object") {
-          parsedFeatures = (Object.values(data.features) as any[]).map((f: any) => String(f));
+          // Explicitly cast Object.values to any[] before mapping
+          parsedFeatures = Array.from(Object.values(data.features as Record<string, any>)).map(f => String(f));
         }
 
         setPaymentPlan({ ...data, features: parsedFeatures });
