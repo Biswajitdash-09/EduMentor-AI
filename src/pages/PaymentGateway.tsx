@@ -45,7 +45,7 @@ const PaymentGateway = () => {
         if (error) throw error;
         
         if (data) {
-          // Initialize features as an empty string array
+          // Initialize features as an empty string array with proper typing
           const parsedFeatures: string[] = [];
           
           // Handle features based on its format
@@ -83,7 +83,7 @@ const PaymentGateway = () => {
           setPaymentPlan({
             ...data,
             features: parsedFeatures
-          });
+          } as PaymentPlan);
         }
       } catch (error: any) {
         console.error("Error fetching plan details:", error.message);
