@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,7 +25,6 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import GuestDashboard from "./pages/GuestDashboard";
 import LeaderboardPage from "./pages/LeaderboardPage";
-import PaymentGateway from "./pages/PaymentGateway";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -207,11 +205,6 @@ const AppRoutes = () => {
       <Route path="/assessments" element={
         <ProtectedRoute>
           <Assessments />
-        </ProtectedRoute>
-      } />
-      <Route path="/payment-gateway/:planId" element={
-        <ProtectedRoute>
-          <PaymentGateway />
         </ProtectedRoute>
       } />
       
