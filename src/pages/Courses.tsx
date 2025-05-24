@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Film, FileText, BookUser, ListChecks, LucideIcon, Trophy, Award } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, Film, FileText, BookUser, ListChecks, LucideIcon, Trophy, Award, Clock, Play, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import VideoEmbed from "@/components/VideoEmbed";
@@ -13,20 +14,9 @@ import MCQuiz from "@/components/MCQuiz";
 import { MCQuestion } from "@/components/MCQuiz";
 import { supabase } from "@/integrations/supabase/client";
 import ViewAssessmentResults, { AssessmentResult } from "@/components/ViewAssessmentResults";
+import { allCourses, getEnrolledCourses, getAvailableCourses, getCourseById, Course, VideoLecture } from "@/data/coursesData";
 
-type Course = {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  progress: number;
-  icon: LucideIcon;
-  color: string;
-  modules: number;
-  videoId?: string;
-};
-
-// Sample MCQ questions for each course
+// Sample MCQ questions for each course - keeping the existing ones and adding more
 const mcqQuestions: Record<string, MCQuestion[]> = {
   "1": [
     {
@@ -198,6 +188,54 @@ const mcqQuestions: Record<string, MCQuestion[]> = {
       ],
       correctAnswerIndex: 2
     }
+  ],
+  "4": [
+    {
+      id: "cs-q1",
+      question: "What is the time complexity of binary search?",
+      options: [
+        "O(n)",
+        "O(log n)",
+        "O(n²)",
+        "O(1)"
+      ],
+      correctAnswerIndex: 1
+    },
+    {
+      id: "cs-q2",
+      question: "Which data structure follows LIFO principle?",
+      options: [
+        "Queue",
+        "Array",
+        "Stack",
+        "Linked List"
+      ],
+      correctAnswerIndex: 2
+    }
+  ],
+  "5": [
+    {
+      id: "chem-q1",
+      question: "What is the general formula for alkanes?",
+      options: [
+        "CnH2n",
+        "CnH2n+2",
+        "CnH2n-2",
+        "CnHn"
+      ],
+      correctAnswerIndex: 1
+    },
+    {
+      id: "chem-q2",
+      question: "Which functional group characterizes alcohols?",
+      options: [
+        "-COOH",
+        "-OH",
+        "-NH2",
+        "-CHO"
+      ],
+      correctAnswerIndex: 1
+    }
   ]
 };
 
@@ -276,19 +314,22 @@ const Courses = () => {
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "video" | "assignments">("overview");
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
   const [isQuizCompleted, setIsQuizCompleted] = useState<boolean>(false);
   const [quizResults, setQuizResults] = useState<AssessmentResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const userType = profile?.user_type || "student";
 
-  const selectedCourse = enrolledCourses.find(course => course.id === selectedCourseId);
+  const selectedCourse = selectedCourseId ? getCourseById(selectedCourseId) : null;
+  const availableCourses = getAvailableCourses(enrolledCourses.map(c => c.id));
   
   useEffect(() => {
     // Initialize with default courses but check for any enrolled courses in Supabase
     if (user) {
       fetchEnrolledCourses();
     } else {
-      setEnrolledCourses(dummyCourses);
+      // For demo, show first 3 courses as enrolled
+      setEnrolledCourses(allCourses.slice(0, 3));
       setLoading(false);
     }
   }, [user]);
@@ -305,23 +346,17 @@ const Courses = () => {
       if (enrollmentsError) throw enrollmentsError;
       
       if (enrollmentsData && enrollmentsData.length > 0) {
-        // User has enrollments, let's use those course IDs
+        // User has enrollments, get those courses
         const userCourseIds = enrollmentsData.map(enrollment => enrollment.course_id);
-        
-        // Filter dummyCourses to only include enrolled courses
-        // In a real app, we would fetch course details from the database here
-        const userCourses = dummyCourses.filter(course => 
-          userCourseIds.includes(course.id)
-        );
-        
-        setEnrolledCourses(userCourses.length > 0 ? userCourses : dummyCourses);
+        const userCourses = getEnrolledCourses(userCourseIds);
+        setEnrolledCourses(userCourses.length > 0 ? userCourses : allCourses.slice(0, 3));
       } else {
-        // No enrollments yet, use default courses
-        setEnrolledCourses(dummyCourses);
+        // No enrollments yet, use default courses for demo
+        setEnrolledCourses(allCourses.slice(0, 3));
       }
     } catch (error) {
       console.error('Error fetching enrolled courses:', error);
-      setEnrolledCourses(dummyCourses);
+      setEnrolledCourses(allCourses.slice(0, 3));
     } finally {
       setLoading(false);
     }
@@ -564,11 +599,14 @@ const Courses = () => {
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-r ${course.color}`}>
                           <course.icon className="h-5 w-5 text-white" />
                         </div>
-                        <span className="text-sm text-gray-500">{course.modules} modules</span>
+                        <div className="text-right">
+                          <Badge variant="outline" className="text-xs">{course.difficulty}</Badge>
+                          <p className="text-xs text-gray-500 mt-1">{course.estimatedHours}h</p>
+                        </div>
                       </div>
-                      <CardTitle>{course.title}</CardTitle>
+                      <CardTitle className="text-lg">{course.title}</CardTitle>
                       <CardDescription className="text-gray-600">
-                        Instructor: {course.instructor}
+                        {course.instructor} • {course.videoLectures.length} lectures
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -588,6 +626,7 @@ const Courses = () => {
                           setSelectedCourseId(course.id);
                           setActiveTab("overview");
                           setIsQuizCompleted(false);
+                          setSelectedVideoIndex(0);
                         }}
                       >
                         Continue Learning
@@ -632,25 +671,22 @@ const Courses = () => {
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-r ${course.color}`}>
                         <course.icon className="h-5 w-5 text-white" />
                       </div>
-                      <span className="text-sm text-gray-500">{course.modules} modules</span>
+                      <div className="text-right">
+                        <Badge variant="outline" className="text-xs">{course.difficulty}</Badge>
+                        <p className="text-xs text-gray-500 mt-1">{course.estimatedHours}h</p>
+                      </div>
                     </div>
-                    <CardTitle>{course.title}</CardTitle>
+                    <CardTitle className="text-lg">{course.title}</CardTitle>
                     <CardDescription className="text-gray-600">
-                      Instructor: {course.instructor}
+                      {course.instructor} • {course.videoLectures.length} lectures
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-700 text-sm mb-4">{course.description}</p>
                     <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="text-xs bg-edu-blue/10 text-edu-blue px-2 py-1 rounded-full">
-                        Beginner
-                      </span>
-                      <span className="text-xs bg-edu-purple/10 text-edu-purple px-2 py-1 rounded-full">
-                        Self-paced
-                      </span>
-                      <span className="text-xs bg-edu-blue-light/10 text-edu-blue-light px-2 py-1 rounded-full">
-                        Online
-                      </span>
+                      <Badge variant="outline" className="text-xs">{course.category}</Badge>
+                      <Badge variant="secondary" className="text-xs">{course.difficulty}</Badge>
+                      <Badge variant="outline" className="text-xs">Online</Badge>
                     </div>
                   </CardContent>
                   <CardFooter>
@@ -666,97 +702,7 @@ const Courses = () => {
             </div>
           </TabsContent>
           
-          {userType !== "student" && (
-            <TabsContent value="manage">
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Course Management</CardTitle>
-                    <CardDescription>
-                      Create and manage courses for your students.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Button className="bg-edu-blue hover:bg-edu-blue-dark">
-                      Create New Course
-                    </Button>
-                    
-                    <div className="border rounded-lg p-4 mt-4">
-                      <h3 className="font-medium mb-4">Your Created Courses</h3>
-                      <p className="text-gray-500">
-                        Start creating courses to see them listed here.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Resource Library</CardTitle>
-                    <CardDescription>
-                      Manage learning materials for your courses.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center space-x-2">
-                            <Film className="h-5 w-5 text-edu-blue" />
-                            <CardTitle className="text-lg">Video Lectures</CardTitle>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-gray-600">
-                            Manage recorded lectures and video content.
-                          </p>
-                        </CardContent>
-                        <CardFooter>
-                          <Button variant="outline" className="w-full">Manage</Button>
-                        </CardFooter>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center space-x-2">
-                            <FileText className="h-5 w-5 text-edu-purple" />
-                            <CardTitle className="text-lg">Documents</CardTitle>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-gray-600">
-                            Manage PDFs, slides, and reading materials.
-                          </p>
-                        </CardContent>
-                        <CardFooter>
-                          <Button variant="outline" className="w-full">Manage</Button>
-                        </CardFooter>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center space-x-2">
-                            <BookOpen className="h-5 w-5 text-edu-blue-light" />
-                            <CardTitle className="text-lg">Quizzes</CardTitle>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-gray-600">
-                            Create and manage assessments and quizzes.
-                          </p>
-                        </CardContent>
-                        <CardFooter>
-                          <Button variant="outline" className="w-full">Manage</Button>
-                        </CardFooter>
-                      </Card>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
-          
-          {/* New course details tab */}
+          {/* New course details tab with video lecture list */}
           <TabsContent value="course-details">
             {selectedCourse && (
               <div className="space-y-6">
@@ -766,7 +712,7 @@ const Courses = () => {
                       <div>
                         <CardTitle className="text-2xl">{selectedCourse.title}</CardTitle>
                         <CardDescription className="text-white/80 mt-1">
-                          Instructor: {selectedCourse.instructor}
+                          {selectedCourse.instructor} • {selectedCourse.videoLectures.length} lectures • {selectedCourse.estimatedHours} hours
                         </CardDescription>
                       </div>
                       <div className="bg-white/20 px-3 py-1 rounded-full text-sm">
@@ -818,6 +764,18 @@ const Courses = () => {
                                 <li>Develop critical thinking skills through historical analysis</li>
                               </>
                             )}
+                            {selectedCourse.id === "4" && (
+                              <>
+                                <li>Understand the time complexity of binary search</li>
+                                <li>Learn about different data structures and their properties</li>
+                              </>
+                            )}
+                            {selectedCourse.id === "5" && (
+                              <>
+                                <li>Study the general formula for alkanes</li>
+                                <li>Understand the functional groups of alcohols</li>
+                              </>
+                            )}
                           </ul>
                         </div>
 
@@ -832,21 +790,63 @@ const Courses = () => {
                       </TabsContent>
 
                       <TabsContent value="video" className="space-y-6">
-                        {selectedCourse.videoId ? (
-                          <VideoEmbed 
-                            videoId={selectedCourse.videoId} 
-                            title={`${selectedCourse.title} - Introduction`}
-                            courseId={selectedCourse.id}
-                          />
-                        ) : (
-                          <div className="text-center py-10">
-                            <Film className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                            <h3 className="text-lg font-medium mb-2">No videos available</h3>
-                            <p className="text-gray-500">
-                              Video content for this course is coming soon.
-                            </p>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          {/* Video Player */}
+                          <div className="lg:col-span-2">
+                            {selectedCourse.videoLectures[selectedVideoIndex] ? (
+                              <VideoEmbed 
+                                videoId={selectedCourse.videoLectures[selectedVideoIndex].videoId} 
+                                title={selectedCourse.videoLectures[selectedVideoIndex].title}
+                                courseId={selectedCourse.id}
+                              />
+                            ) : (
+                              <div className="text-center py-10">
+                                <Film className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                                <h3 className="text-lg font-medium mb-2">No videos available</h3>
+                                <p className="text-gray-500">
+                                  Video content for this course is coming soon.
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {/* Video Playlist */}
+                          <div className="space-y-2">
+                            <h3 className="font-semibold mb-4">Course Content</h3>
+                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                              {selectedCourse.videoLectures.map((lecture, index) => (
+                                <Card 
+                                  key={lecture.id} 
+                                  className={`cursor-pointer transition-colors ${
+                                    selectedVideoIndex === index ? 'bg-edu-blue/10 border-edu-blue' : 'hover:bg-gray-50'
+                                  }`}
+                                  onClick={() => setSelectedVideoIndex(index)}
+                                >
+                                  <CardContent className="p-3">
+                                    <div className="flex items-start gap-3">
+                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                        selectedVideoIndex === index ? 'bg-edu-blue text-white' : 'bg-gray-200'
+                                      }`}>
+                                        {index < selectedVideoIndex ? <CheckCircle className="h-4 w-4" /> : index + 1}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-sm leading-tight">{lecture.title}</h4>
+                                        <p className="text-xs text-gray-600 mt-1">{lecture.description}</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                          <Clock className="h-3 w-3 text-gray-400" />
+                                          <span className="text-xs text-gray-500">{lecture.duration}</span>
+                                        </div>
+                                      </div>
+                                      {selectedVideoIndex === index && (
+                                        <Play className="h-4 w-4 text-edu-blue" />
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
 
                         <div className="flex justify-between">
                           <Button 
@@ -855,12 +855,28 @@ const Courses = () => {
                           >
                             Back to Overview
                           </Button>
-                          <Button 
-                            className="bg-edu-blue hover:bg-edu-blue-dark"
-                            onClick={() => setActiveTab("assignments")}
-                          >
-                            Take Quiz
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline"
+                              disabled={selectedVideoIndex === 0}
+                              onClick={() => setSelectedVideoIndex(Math.max(0, selectedVideoIndex - 1))}
+                            >
+                              Previous Lecture
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              disabled={selectedVideoIndex === selectedCourse.videoLectures.length - 1}
+                              onClick={() => setSelectedVideoIndex(Math.min(selectedCourse.videoLectures.length - 1, selectedVideoIndex + 1))}
+                            >
+                              Next Lecture
+                            </Button>
+                            <Button 
+                              className="bg-edu-blue hover:bg-edu-blue-dark"
+                              onClick={() => setActiveTab("assignments")}
+                            >
+                              Take Quiz
+                            </Button>
+                          </div>
                         </div>
                       </TabsContent>
 
@@ -911,6 +927,8 @@ const Courses = () => {
               </div>
             )}
           </TabsContent>
+
+          {/* ... keep existing code (manage courses tab for faculty) */}
         </Tabs>
       </div>
     </DashboardLayout>

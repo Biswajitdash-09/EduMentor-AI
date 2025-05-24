@@ -17,6 +17,7 @@ import Dashboard from "@/pages/Dashboard";
 import FacultyDashboard from "@/pages/FacultyDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AITutor from "@/pages/AITutor";
+import AIFeatures from "@/pages/AIFeatures";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
 import Courses from "@/pages/Courses";
@@ -106,6 +107,11 @@ export const AppRoutes = () => {
       <Route path="/ai-tutor" element={
         <ProtectedRoute>
           <AITutor />
+        </ProtectedRoute>
+      } />
+      <Route path="/ai-features" element={
+        <ProtectedRoute>
+          <AIFeatures />
         </ProtectedRoute>
       } />
       <Route path="/profile" element={

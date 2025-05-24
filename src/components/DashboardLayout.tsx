@@ -19,6 +19,8 @@ import {
   FileText,
   BellRing,
   UserCog,
+  Brain,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,6 +66,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       { name: "Courses", icon: <BookOpen className="h-5 w-5" />, href: "/courses" },
       { name: "Assessments", icon: <ListChecks className="h-5 w-5" />, href: "/assessments" },
       { name: "AI Tutor", icon: <MessageSquare className="h-5 w-5" />, href: "/ai-tutor" },
+      { name: "AI Features", icon: <Sparkles className="h-5 w-5" />, href: "/ai-features" },
       { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
       { name: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
     ];
@@ -74,6 +77,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       { name: "Students", icon: <Users className="h-5 w-5" />, href: "/faculty?tab=students" },
       { name: "Assignments", icon: <ListChecks className="h-5 w-5" />, href: "/faculty?tab=assignments" },
       { name: "Announcements", icon: <BellRing className="h-5 w-5" />, href: "/faculty?tab=announcements" },
+      { name: "AI Features", icon: <Brain className="h-5 w-5" />, href: "/ai-features" },
       { name: "Risk Analysis", icon: <AlertTriangle className="h-5 w-5" />, href: "/risk-analysis" },
       { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
       { name: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
@@ -84,6 +88,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       { name: "User Management", icon: <UserCog className="h-5 w-5" />, href: "/admin?tab=user-management" },
       { name: "Site Settings", icon: <Settings className="h-5 w-5" />, href: "/admin?tab=site-settings" },
       { name: "Analytics", icon: <BarChart className="h-5 w-5" />, href: "/admin?tab=analytics" },
+      { name: "AI Features", icon: <Brain className="h-5 w-5" />, href: "/ai-features" },
       { name: "Audit Logs", icon: <FileText className="h-5 w-5" />, href: "/admin?tab=audit-logs" },
       { name: "Profile", icon: <User className="h-5 w-5" />, href: "/profile" },
     ];
