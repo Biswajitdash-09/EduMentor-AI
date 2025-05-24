@@ -413,6 +413,18 @@ export const allCourses: Course[] = [
   }
 ];
 
+// Create an object with named courses for easier access
+export const coursesData = {
+  machinelearning101: allCourses[0],
+  calculusBasics: allCourses[1],
+  worldHistory: allCourses[2],
+  computerScience: allCourses[3],
+  organicChemistry: allCourses[4],
+  businessEconomics: allCourses[5],
+  digitalArt: allCourses[6],
+  musicTheory: allCourses[7]
+};
+
 export const getEnrolledCourses = (userCourseIds: string[]): Course[] => {
   return allCourses.filter(course => userCourseIds.includes(course.id));
 };

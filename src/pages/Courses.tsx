@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/DashboardLayout';
 import VideoEmbed from '@/components/VideoEmbed';
-import { Course, coursesData, getCourseById } from '@/data/coursesData';
+import { Course, coursesData, getCourseById, allCourses } from '@/data/coursesData';
 
 // Import the new components
 import CourseCard from '@/components/courses/CourseCard';
@@ -92,9 +92,6 @@ const Courses = () => {
     setCurrentVideoId(videoId);
   };
 
-  // Get all available courses
-  const allCourses = Object.values(coursesData);
-  
   // Filter available courses (not enrolled)
   const availableCourses = allCourses.filter(
     course => !enrolledCourses.some(enrolled => enrolled.id === course.id)

@@ -45,9 +45,6 @@ const VideoLectureCard: React.FC<VideoLectureCardProps> = ({
                 <Clock className="h-3 w-3 mr-1" />
                 {lecture.duration}
               </Badge>
-              <Badge variant="secondary" className="text-xs">
-                {lecture.difficulty}
-              </Badge>
             </div>
           </div>
           

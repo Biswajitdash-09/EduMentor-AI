@@ -5,19 +5,19 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 interface VideoEmbedProps {
   videoId: string;
-  title: string;
-  courseId: string;
+  title?: string;
+  courseId?: string;
 }
 
-const VideoEmbed = ({ videoId, title, courseId }: VideoEmbedProps) => {
+const VideoEmbed = ({ videoId, title = "Video", courseId }: VideoEmbedProps) => {
   // Get navigate function if we're in a router context, otherwise undefined
   const navigate = useNavigate ? useNavigate() : undefined;
   const location = useLocation ? useLocation() : undefined;
   
   const handleEnrollClick = () => {
-    if (navigate) {
+    if (navigate && courseId) {
       navigate(`/courses/${courseId}/enroll`);
-    } else {
+    } else if (courseId) {
       // Fallback for when used outside router context
       window.location.href = `/courses/${courseId}/enroll`;
     }
@@ -36,14 +36,16 @@ const VideoEmbed = ({ videoId, title, courseId }: VideoEmbedProps) => {
           allowFullScreen
         ></iframe>
       </div>
-      <div className="flex justify-end mt-4">
-        <Button
-          className="bg-edu-blue hover:bg-edu-blue-dark"
-          onClick={handleEnrollClick}
-        >
-          Enroll Now
-        </Button>
-      </div>
+      {courseId && (
+        <div className="flex justify-end mt-4">
+          <Button
+            className="bg-edu-blue hover:bg-edu-blue-dark"
+            onClick={handleEnrollClick}
+          >
+            Enroll Now
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
