@@ -239,74 +239,6 @@ const mcqQuestions: Record<string, MCQuestion[]> = {
   ]
 };
 
-// Updated course data with YouTube videoIds
-const dummyCourses: Course[] = [
-  {
-    id: "1",
-    title: "Introduction to Machine Learning",
-    description: "Learn the fundamentals of machine learning and AI algorithms.",
-    instructor: "Dr. Sarah Johnson",
-    progress: 65,
-    icon: BookUser,
-    color: "from-edu-blue to-edu-blue-light",
-    modules: 12,
-    videoId: "ukzFI9rgwfU" // Machine Learning introduction video
-  },
-  {
-    id: "2",
-    title: "Advanced Calculus",
-    description: "Master calculus concepts with practical applications.",
-    instructor: "Prof. Michael Chen",
-    progress: 30,
-    icon: BookOpen,
-    color: "from-edu-purple to-edu-purple-light",
-    modules: 10,
-    videoId: "WUvTyaaNkzM" // Calculus introduction video
-  },
-  {
-    id: "3",
-    title: "World History: Modern Era",
-    description: "Explore significant events and figures from 1900 to present.",
-    instructor: "Dr. Emily Rodriguez",
-    progress: 80,
-    icon: BookUser,
-    color: "from-edu-blue-light to-edu-purple",
-    modules: 8,
-    videoId: "Yocja_N5s1I" // Updated Modern history video - Crash Course World History
-  }
-];
-
-// Keeping the available courses the same
-const availableCourses = [
-  {
-    id: "4",
-    title: "Introduction to Computer Science",
-    description: "A comprehensive introduction to computer science principles and programming.",
-    instructor: "Prof. James Wilson",
-    icon: BookUser,
-    color: "from-edu-blue to-edu-blue-light",
-    modules: 15
-  },
-  {
-    id: "5",
-    title: "Organic Chemistry",
-    description: "Study organic compounds, reactions, and laboratory techniques.",
-    instructor: "Dr. Lisa Wang",
-    icon: BookOpen,
-    color: "from-edu-purple to-edu-purple-light",
-    modules: 12
-  },
-  {
-    id: "6",
-    title: "Business Economics",
-    description: "Learn economic principles applied to business decision-making.",
-    instructor: "Prof. Robert Martinez",
-    icon: BookUser,
-    color: "from-edu-blue-light to-edu-purple",
-    modules: 10
-  }
-];
-
 const Courses = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -391,7 +323,7 @@ const Courses = () => {
         // Add the course to enrolledCourses if it's not already there
         const courseExists = enrolledCourses.some(course => course.id === courseId);
         if (!courseExists) {
-          const courseToAdd = dummyCourses.find(course => course.id === courseId);
+          const courseToAdd = getCourseById(courseId);
           if (courseToAdd) {
             setEnrolledCourses(prev => [...prev, courseToAdd]);
           }
@@ -408,8 +340,8 @@ const Courses = () => {
         course_id: courseId
       });
       
-      // Find the course from available courses
-      const enrolledCourse = dummyCourses.find(course => course.id === courseId);
+      // Find the course from all courses
+      const enrolledCourse = getCourseById(courseId);
       
       if (enrolledCourse) {
         // Add to enrolledCourses
@@ -928,7 +860,14 @@ const Courses = () => {
             )}
           </TabsContent>
 
-          {/* ... keep existing code (manage courses tab for faculty) */}
+          {userType !== "student" && (
+            <TabsContent value="manage">
+              <div>
+                <h2>Manage Courses</h2>
+                <p>This section is under development and will allow faculty and admins to manage courses.</p>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardLayout>
