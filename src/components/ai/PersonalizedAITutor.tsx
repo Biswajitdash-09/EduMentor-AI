@@ -1,42 +1,13 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Bot, 
-  User, 
-  Send, 
-  BookOpen, 
-  Brain, 
-  Target, 
-  TrendingUp,
-  Lightbulb,
-  MessageSquare,
-  Loader2
-} from 'lucide-react';
+import { Brain, BookOpen, Target, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-  type?: 'explanation' | 'quiz' | 'suggestion' | 'encouragement';
-}
-
-interface LearningProfile {
-  style: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
-  pace: 'fast' | 'medium' | 'slow';
-  strengths: string[];
-  weaknesses: string[];
-  interests: string[];
-}
+import ChatInterface from './tutor/ChatInterface';
+import LearningProfileSidebar from './tutor/LearningProfileSidebar';
+import { Message, LearningProfile, Subject } from '@/types/tutor';
 
 const PersonalizedAITutor = () => {
   const { user, profile } = useAuth();
@@ -45,16 +16,15 @@ const PersonalizedAITutor = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeSubject, setActiveSubject] = useState('general');
-  const [learningProfile, setLearningProfile] = useState<LearningProfile>({
+  const [learningProfile] = useState<LearningProfile>({
     style: 'visual',
     pace: 'medium',
     strengths: ['Problem solving', 'Logical thinking'],
     weaknesses: ['Time management', 'Complex concepts'],
     interests: ['Technology', 'Science']
   });
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const subjects = [
+  const subjects: Subject[] = [
     { id: 'general', name: 'General Help', icon: Brain },
     { id: 'math', name: 'Mathematics', icon: Target },
     { id: 'science', name: 'Science', icon: BookOpen },
@@ -62,7 +32,6 @@ const PersonalizedAITutor = () => {
   ];
 
   useEffect(() => {
-    // Initialize with welcome message
     if (messages.length === 0) {
       const welcomeMessage: Message = {
         id: '1',
@@ -73,14 +42,9 @@ const PersonalizedAITutor = () => {
       };
       setMessages([welcomeMessage]);
     }
-  }, [profile]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [profile, messages.length]);
 
   const generateAIResponse = async (userMessage: string, subject: string): Promise<string> => {
-    // Simulate AI processing based on learning profile
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const responses = {
@@ -149,14 +113,7 @@ const PersonalizedAITutor = () => {
     }
   };
 
-  const getMessageIcon = (type?: string) => {
-    switch (type) {
-      case 'quiz': return <Target className="h-4 w-4" />;
-      case 'suggestion': return <Lightbulb className="h-4 w-4" />;
-      case 'encouragement': return <TrendingUp className="h-4 w-4" />;
-      default: return <MessageSquare className="h-4 w-4" />;
-    }
-  };
+  const currentSubject = subjects.find(s => s.id === activeSubject) || subjects[0];
 
   return (
     <div className="space-y-6">
@@ -181,142 +138,18 @@ const PersonalizedAITutor = () => {
             {subjects.map((subject) => (
               <TabsContent key={subject.id} value={subject.id} className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  {/* Chat Interface */}
                   <div className="lg:col-span-3">
-                    <Card className="h-[600px] flex flex-col">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <subject.icon className="h-5 w-5" />
-                            <span className="font-medium">{subject.name} Tutor</span>
-                          </div>
-                          <Badge variant="outline">{learningProfile.style} learner</Badge>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="flex-1 flex flex-col p-4">
-                        <ScrollArea className="flex-1 pr-4">
-                          <div className="space-y-4">
-                            {messages.map((message) => (
-                              <div
-                                key={message.id}
-                                className={`flex items-start gap-3 ${
-                                  message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
-                                }`}
-                              >
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback>
-                                    {message.sender === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                                  </AvatarFallback>
-                                </Avatar>
-                                
-                                <div
-                                  className={`max-w-[80%] rounded-lg p-3 ${
-                                    message.sender === 'user'
-                                      ? 'bg-edu-blue text-white'
-                                      : 'bg-gray-100 text-gray-900'
-                                  }`}
-                                >
-                                  {message.sender === 'ai' && message.type && (
-                                    <div className="flex items-center gap-2 mb-2 text-sm opacity-70">
-                                      {getMessageIcon(message.type)}
-                                      <span className="capitalize">{message.type}</span>
-                                    </div>
-                                  )}
-                                  <p className="text-sm">{message.content}</p>
-                                  <p className="text-xs opacity-50 mt-2">
-                                    {message.timestamp.toLocaleTimeString()}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                            {isLoading && (
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback>
-                                    <Bot className="h-4 w-4" />
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="bg-gray-100 rounded-lg p-3">
-                                  <div className="flex items-center gap-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">AI is thinking...</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div ref={messagesEndRef} />
-                        </ScrollArea>
-                        
-                        <div className="flex gap-2 pt-4 border-t">
-                          <Input
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            placeholder={`Ask about ${subject.name.toLowerCase()}...`}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                            disabled={isLoading}
-                          />
-                          <Button 
-                            onClick={handleSendMessage} 
-                            disabled={isLoading || !inputMessage.trim()}
-                            className="bg-edu-blue hover:bg-edu-blue-dark"
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <ChatInterface
+                      messages={messages}
+                      inputMessage={inputMessage}
+                      setInputMessage={setInputMessage}
+                      isLoading={isLoading}
+                      onSendMessage={handleSendMessage}
+                      subject={subject}
+                      learningProfile={learningProfile}
+                    />
                   </div>
-
-                  {/* Learning Profile Sidebar */}
-                  <div className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Learning Profile</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Learning Style</p>
-                          <Badge variant="secondary">{learningProfile.style}</Badge>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Pace</p>
-                          <Badge variant="outline">{learningProfile.pace}</Badge>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Strengths</p>
-                          <div className="space-y-1">
-                            {learningProfile.strengths.map((strength, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {strength}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Quick Actions</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <Button variant="outline" size="sm" className="w-full text-xs">
-                          <Lightbulb className="h-3 w-3 mr-1" />
-                          Get Study Tips
-                        </Button>
-                        <Button variant="outline" size="sm" className="w-full text-xs">
-                          <Target className="h-3 w-3 mr-1" />
-                          Practice Quiz
-                        </Button>
-                        <Button variant="outline" size="sm" className="w-full text-xs">
-                          <BookOpen className="h-3 w-3 mr-1" />
-                          Explain Concept
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
+                  <LearningProfileSidebar learningProfile={learningProfile} />
                 </div>
               </TabsContent>
             ))}
