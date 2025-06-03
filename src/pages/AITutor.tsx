@@ -22,13 +22,40 @@ const AITutor = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: "assistant",
-      content: "Hello! I'm your AI tutor. How can I help you with your studies today?",
+      content: "Hello! I'm your AI tutor powered by Google Gemini. How can I help you with your studies today?",
       timestamp: new Date(),
     },
   ]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const getAIResponse = async (question: string): Promise<string> => {
+    try {
+      const systemPrompt = `You are an AI tutor specializing in academic subjects. Provide clear, educational explanations and help students understand complex concepts. Be encouraging and supportive while maintaining academic accuracy.`;
+
+      const { data, error } = await supabase.functions.invoke('gemini-chat', {
+        body: {
+          message: question,
+          systemPrompt: systemPrompt
+        }
+      });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to get AI response');
+      }
+
+      return data.response;
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      throw new Error('Failed to get AI response. Please try again.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,43 +69,44 @@ const AITutor = () => {
     };
     
     setMessages((prev) => [...prev, userMessage]);
+    const currentMessage = newMessage;
     setNewMessage("");
     setIsLoading(true);
     
     try {
-      // In a real implementation, this would connect to an AI service like Gemini
-      // For now, we'll simulate a response after a delay
-      setTimeout(async () => {
-        // Here's where we would call the AI API
-        const aiResponse = `Thank you for your question about "${userMessage.content}". In an actual implementation, this would be answered by Gemini or another AI service integrated with our backend. For now, consider this a placeholder response that demonstrates the UI flow.`;
-        
-        const assistantMessage: Message = {
-          type: "assistant",
-          content: aiResponse,
-          timestamp: new Date(),
-        };
-        
-        setMessages((prev) => [...prev, assistantMessage]);
-        setIsLoading(false);
-        
-        // Save the conversation in the database
-        if (user) {
+      const aiResponse = await getAIResponse(currentMessage);
+      
+      const assistantMessage: Message = {
+        type: "assistant",
+        content: aiResponse,
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, assistantMessage]);
+      
+      // Save the conversation in the database if user is logged in
+      if (user) {
+        try {
           await supabase.from("academic_questions").insert([
             {
               user_id: user.id,
-              question: userMessage.content,
+              question: currentMessage,
               answer: aiResponse,
             },
           ]);
+        } catch (dbError) {
+          console.error('Error saving to database:', dbError);
+          // Don't show error to user for database save failures
         }
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to get a response. Please try again.",
+        description: error.message || "Failed to get a response. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -93,7 +121,7 @@ const AITutor = () => {
           <CardHeader className="bg-gradient-to-r from-edu-blue to-edu-purple p-4 rounded-t-lg">
             <CardTitle className="text-white flex items-center">
               <Bot className="h-6 w-6 mr-2" />
-              EduMentor AI Assistant
+              EduMentor AI Assistant (Powered by Google Gemini)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">

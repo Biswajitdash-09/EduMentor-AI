@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, BookOpen, Target, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import ChatInterface from './tutor/ChatInterface';
 import LearningProfileSidebar from './tutor/LearningProfileSidebar';
 import { Message, LearningProfile, Subject } from '@/types/tutor';
@@ -35,7 +36,7 @@ const PersonalizedAITutor = () => {
     if (messages.length === 0) {
       const welcomeMessage: Message = {
         id: '1',
-        content: `Hello ${profile?.first_name || 'there'}! I'm your personalized AI tutor. I'm here to help you learn at your own pace. What would you like to study today?`,
+        content: `Hello ${profile?.first_name || 'there'}! I'm your personalized AI tutor powered by Google Gemini. I'm here to help you learn at your own pace. What would you like to study today?`,
         sender: 'ai',
         timestamp: new Date(),
         type: 'encouragement'
@@ -45,35 +46,33 @@ const PersonalizedAITutor = () => {
   }, [profile, messages.length]);
 
   const generateAIResponse = async (userMessage: string, subject: string): Promise<string> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const responses = {
-      visual: [
-        "Let me break this down visually for you. Imagine this concept as...",
-        "Think of it like a diagram where...",
-        "Picture this scenario..."
-      ],
-      auditory: [
-        "Listen carefully to this explanation...",
-        "Think about the rhythm and pattern of...",
-        "Let me explain this step by step..."
-      ],
-      kinesthetic: [
-        "Let's work through this hands-on approach...",
-        "Try practicing this by doing...",
-        "The best way to understand this is by actually trying..."
-      ],
-      reading: [
-        "Let me provide you with a detailed explanation...",
-        "Here's a comprehensive breakdown of...",
-        "Consider reading about this topic from this perspective..."
-      ]
-    };
+    try {
+      const systemPrompt = `You are a personalized AI tutor specializing in ${subject}. The student has a ${learningProfile.style} learning style and prefers a ${learningProfile.pace} pace. Their strengths include: ${learningProfile.strengths.join(', ')}. Their areas for improvement include: ${learningProfile.weaknesses.join(', ')}. Their interests are: ${learningProfile.interests.join(', ')}. 
 
-    const styleResponses = responses[learningProfile.style];
-    const randomResponse = styleResponses[Math.floor(Math.random() * styleResponses.length)];
-    
-    return `${randomResponse} Based on your question about "${userMessage}" in ${subject}, I can see you're working on an important concept. Given your learning style (${learningProfile.style}) and pace (${learningProfile.pace}), I recommend focusing on the fundamentals first. Would you like me to explain this concept step by step or provide some practice problems?`;
+Please provide educational, encouraging, and personalized responses that match their learning style. Break down complex concepts into digestible parts and provide practical examples when possible.`;
+
+      const { data, error } = await supabase.functions.invoke('gemini-chat', {
+        body: {
+          message: userMessage,
+          context: `Subject: ${subject}, Learning Style: ${learningProfile.style}`,
+          systemPrompt: systemPrompt
+        }
+      });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to get AI response');
+      }
+
+      return data.response;
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
+      throw new Error('Failed to get AI response. Please try again.');
+    }
   };
 
   const handleSendMessage = async () => {
@@ -102,10 +101,10 @@ const PersonalizedAITutor = () => {
       };
 
       setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to get AI response. Please try again.",
+        description: error.message || "Failed to get AI response. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -121,7 +120,7 @@ const PersonalizedAITutor = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-edu-blue" />
-            Personalized AI Tutor
+            Personalized AI Tutor (Powered by Google Gemini)
           </CardTitle>
         </CardHeader>
         <CardContent>

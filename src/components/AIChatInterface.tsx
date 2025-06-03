@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { GraduationCap, Send } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Message {
   role: "user" | "assistant";
@@ -16,50 +18,42 @@ const AIChatInterface = () => {
     {
       role: "assistant",
       content:
-        "Hi there! I'm your EduMentor AI tutor. How can I help you with your learning today?",
+        "Hi there! I'm your EduMentor AI tutor powered by Google Gemini. How can I help you with your learning today?",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  // For demo purposes, we'll simulate AI responses
-  const simulateResponse = (question: string) => {
-    setIsLoading(true);
-    
-    // Simulated AI response examples based on questions
-    const responses: Record<string, string> = {
-      default: "That's an interesting question. Let me explain it in detail. The concept involves several key principles that build upon each other. First, we need to understand the fundamentals, then we can explore more complex aspects. Would you like me to break this down further?",
-      math: "In mathematics, this problem can be approached using specific formulas and techniques. Let's work through it step by step. First, identify the key variables and relationships. Then, apply the relevant mathematical principles to find the solution.",
-      science: "This scientific concept relates to important natural processes. The key mechanisms involve interaction between multiple factors. Scientists have conducted extensive research in this area, and the current understanding is based on experimental evidence.",
-      history: "Historical events are interconnected and influenced by various factors including social, economic, and political contexts. Understanding historical developments requires examining multiple perspectives and primary sources.",
-    };
+  const getAIResponse = async (question: string): Promise<string> => {
+    try {
+      const systemPrompt = `You are EduMentor AI, an educational assistant. Provide helpful, accurate, and encouraging responses to student questions. Focus on explaining concepts clearly and providing educational value.`;
 
-    // Determine response type based on keywords
-    let responseText = responses.default;
-    if (question.toLowerCase().includes("math") || question.toLowerCase().includes("equation") || question.toLowerCase().includes("formula")) {
-      responseText = responses.math;
-    } else if (question.toLowerCase().includes("science") || question.toLowerCase().includes("biology") || question.toLowerCase().includes("physics")) {
-      responseText = responses.science;
-    } else if (question.toLowerCase().includes("history") || question.toLowerCase().includes("war") || question.toLowerCase().includes("civilization")) {
-      responseText = responses.history;
+      const { data, error } = await supabase.functions.invoke('gemini-chat', {
+        body: {
+          message: question,
+          systemPrompt: systemPrompt
+        }
+      });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to get AI response');
+      }
+
+      return data.response;
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      throw new Error('Failed to get AI response. Please try again.');
     }
-
-    // Simulate network delay
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: responseText,
-          timestamp: new Date(),
-        },
-      ]);
-      setIsLoading(false);
-    }, 1000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
@@ -70,10 +64,30 @@ const AIChatInterface = () => {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
+    setIsLoading(true);
 
-    // Simulate AI response
-    simulateResponse(input);
+    try {
+      const aiResponse = await getAIResponse(currentInput);
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: aiResponse,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to get AI response. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -81,7 +95,7 @@ const AIChatInterface = () => {
       <CardContent className="p-0 flex flex-col h-full">
         <div className="bg-edu-blue p-4 text-white flex items-center">
           <GraduationCap className="h-6 w-6 mr-2" />
-          <h2 className="font-semibold text-lg">AI Tutor</h2>
+          <h2 className="font-semibold text-lg">EduMentor AI (Powered by Google Gemini)</h2>
         </div>
         
         <div className="flex-1 overflow-auto p-4 bg-gray-50">
