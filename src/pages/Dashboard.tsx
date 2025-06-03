@@ -3,14 +3,19 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import BackButton from "@/components/common/BackButton";
+import GamificationPanel from "@/components/gamification/GamificationPanel";
+import RealtimeLeaderboard from "@/components/leaderboard/RealtimeLeaderboard";
+import NewCourseCard from "@/components/courses/NewCourseCard";
+import AssignmentCard from "@/components/assignments/AssignmentCard";
+import ProgressTracker from "@/components/progress/ProgressTracker";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, ListChecks, MessageSquare, Loader2, Award, Trophy, Users } from "lucide-react";
+import { BookOpen, ListChecks, MessageSquare, Loader2, Trophy, Users, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import PaymentPlans from "@/components/PaymentPlans";
+import { newCoursesData, assignmentsData } from "@/data/newCoursesData";
 import { Json } from "@/integrations/supabase/types";
 
 type UserAchievement = {
@@ -52,7 +57,7 @@ const Dashboard = () => {
         .eq('user_id', user.id)
         .single();
         
-      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows returned
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
       
@@ -73,7 +78,6 @@ const Dashboard = () => {
           
         setAchievements(defaultAchievement);
       } else {
-        // Convert the badges from Json to string[]
         const parsedBadges: string[] = Array.isArray(data.badges) 
           ? data.badges as string[]
           : typeof data.badges === 'string' 
@@ -111,179 +115,213 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
+  const handleCourseEnroll = (courseId: string) => {
+    navigate(`/courses/${courseId}/enroll`);
+  };
+
+  const handleCourseContinue = (courseId: string) => {
+    navigate(`/courses/${courseId}`);
+  };
+
+  const handleAssignmentStart = (assignmentId: string) => {
+    navigate(`/assignments/${assignmentId}`);
+  };
+
+  const handleAssignmentView = (assignmentId: string) => {
+    navigate(`/assignments/${assignmentId}/results`);
+  };
+
+  if (loading || loadingAchievements) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-edu-blue" />
-      </div>
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-edu-blue" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!user || !profile) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Authentication Required</CardTitle>
+              <CardDescription>Please sign in to access your dashboard</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate('/signin/student')} className="w-full">
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
     );
   }
 
   const userType = profile?.user_type || "student";
+  const userLevel = achievements ? Math.floor(achievements.points / 1000) + 1 : 1;
+  const userStreak = 7; // Mock data
+  
+  // Mock progress data
+  const progressData = {
+    overallProgress: 65,
+    coursesCompleted: 2,
+    totalCourses: 6,
+    assignmentsCompleted: 3,
+    totalAssignments: 5,
+    averageScore: 87,
+    weeklyGoal: 10,
+    weeklyProgress: 7.5
+  };
+
+  const enrolledCourses = newCoursesData.filter(course => course.isEnrolled);
+  const availableCourses = newCoursesData.filter(course => !course.isEnrolled).slice(0, 3);
+  const recentAssignments = assignmentsData.slice(0, 3);
   
   return (
     <DashboardLayout>
       <div className="space-y-8">
+        <BackButton />
+        
+        {/* Welcome Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Welcome, {profile?.first_name || user?.email?.split("@")[0] || "User"}!
+              Welcome back, {profile?.first_name || user?.email?.split("@")[0] || "User"}! 🎉
             </h1>
             <p className="text-gray-500">
               {userType === "student" 
-                ? "Track your learning progress and access all your educational resources." 
+                ? "Ready to continue your learning journey?" 
                 : userType === "faculty"
                 ? "Manage your courses and monitor student performance."
                 : "Access administrative controls and platform oversight."}
             </p>
           </div>
-          
-          {achievements && (
-            <div className="mt-4 md:mt-0 flex items-center bg-edu-blue/5 p-3 rounded-lg">
-              <div className="mr-4">
-                <Trophy className="h-10 w-10 text-edu-blue" />
-              </div>
-              <div>
-                <p className="font-medium">Your Points</p>
-                <p className="text-2xl font-bold">{achievements.points}</p>
-              </div>
-            </div>
-          )}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
-            {/* Main dashboard content */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-medium flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2 text-edu-blue" />
-                    Courses
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {userType === "student" ? (
-                    <p className="text-gray-500 mb-2">Access your enrolled courses and learning materials.</p>
-                  ) : (
-                    <p className="text-gray-500 mb-2">Manage your courses and create new content.</p>
-                  )}
-                  <Button 
-                    className="w-full bg-edu-blue hover:bg-edu-blue-dark"
-                    onClick={() => navigate("/courses")}
-                  >
-                    View Courses
-                  </Button>
+
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Progress Tracker */}
+            <ProgressTracker data={progressData} />
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/courses")}>
+                <CardContent className="p-6 text-center">
+                  <BookOpen className="h-8 w-8 mx-auto mb-3 text-edu-blue" />
+                  <h3 className="font-semibold">Courses</h3>
+                  <p className="text-sm text-gray-600">Continue learning</p>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-medium flex items-center">
-                    <ListChecks className="h-5 w-5 mr-2 text-edu-purple" />
-                    Assessments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {userType === "student" ? (
-                    <p className="text-gray-500 mb-2">Take tests and view your assessment scores.</p>
-                  ) : (
-                    <p className="text-gray-500 mb-2">Create and grade assessments for your students.</p>
-                  )}
-                  <Button 
-                    className="w-full bg-edu-purple hover:bg-edu-purple-dark"
-                    onClick={() => navigate("/assessments")}
-                  >
-                    View Assessments
-                  </Button>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/assessments")}>
+                <CardContent className="p-6 text-center">
+                  <ListChecks className="h-8 w-8 mx-auto mb-3 text-edu-purple" />
+                  <h3 className="font-semibold">Assessments</h3>
+                  <p className="text-sm text-gray-600">Test your knowledge</p>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-medium flex items-center">
-                    <MessageSquare className="h-5 w-5 mr-2 text-edu-blue-light" />
-                    AI Tutor
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-500 mb-2">Get personalized help with your academic questions.</p>
-                  <Button 
-                    className="w-full bg-edu-blue-light hover:bg-edu-blue-light/90"
-                    onClick={() => navigate("/ai-tutor")}
-                  >
-                    Ask AI Tutor
-                  </Button>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/ai-tutor")}>
+                <CardContent className="p-6 text-center">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-3 text-edu-blue-light" />
+                  <h3 className="font-semibold">AI Tutor</h3>
+                  <p className="text-sm text-gray-600">Get help instantly</p>
                 </CardContent>
               </Card>
             </div>
-            
-            {/* User progress section */}
+
+            {/* Enrolled Courses */}
+            {enrolledCourses.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Continue Learning</CardTitle>
+                  <CardDescription>Pick up where you left off</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {enrolledCourses.map((course) => (
+                      <NewCourseCard
+                        key={course.id}
+                        course={course}
+                        onEnroll={handleCourseEnroll}
+                        onContinue={handleCourseContinue}
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Recent Assignments */}
             <Card>
               <CardHeader>
-                <CardTitle>Your Learning Progress</CardTitle>
+                <CardTitle>Recent Assignments</CardTitle>
+                <CardDescription>Stay on top of your deadlines</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Course Completion</span>
-                    <span className="text-gray-500">
-                      {achievements?.completed_courses || 0} completed
-                    </span>
-                  </div>
-                  <Progress value={achievements?.completed_courses ? Math.min(achievements.completed_courses * 10, 100) : 0} className="h-2" />
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {recentAssignments.map((assignment) => (
+                    <AssignmentCard
+                      key={assignment.id}
+                      assignment={assignment}
+                      onStart={handleAssignmentStart}
+                      onView={handleAssignmentView}
+                    />
+                  ))}
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Assessments</span>
-                    <span className="text-gray-500">
-                      {achievements?.completed_assessments || 0} completed
-                    </span>
-                  </div>
-                  <Progress value={achievements?.completed_assessments ? Math.min(achievements.completed_assessments * 10, 100) : 0} className="h-2" />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="border rounded-lg p-4 flex items-center space-x-4">
-                    <div className="bg-edu-blue/10 p-3 rounded-full">
-                      <Award className="h-6 w-6 text-edu-blue" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Leaderboard Rank</p>
-                      <p className="text-lg font-semibold">
-                        {stats ? `#${stats.rank} of ${stats.totalUsers}` : "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="border rounded-lg p-4 flex items-center space-x-4">
-                    <div className="bg-edu-purple/10 p-3 rounded-full">
-                      <Users className="h-6 w-6 text-edu-purple" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Community Status</p>
-                      <p className="text-lg font-semibold">
-                        {achievements && achievements.points >= 500 ? "Gold Member" : 
-                         achievements && achievements.points >= 200 ? "Silver Member" : 
-                         "Bronze Member"}
-                      </p>
-                    </div>
-                  </div>
+              </CardContent>
+            </Card>
+
+            {/* Available Courses */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Explore New Courses</CardTitle>
+                <CardDescription>Expand your knowledge with these courses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availableCourses.map((course) => (
+                    <NewCourseCard
+                      key={course.id}
+                      course={course}
+                      onEnroll={handleCourseEnroll}
+                      onContinue={handleCourseContinue}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </div>
-          
-          {/* User profile and upcoming activities */}
+
+          {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Gamification Panel */}
+            {achievements && (
+              <GamificationPanel
+                userPoints={achievements.points}
+                level={userLevel}
+                streak={userStreak}
+                badges={achievements.badges}
+              />
+            )}
+            
+            {/* Realtime Leaderboard */}
+            <RealtimeLeaderboard />
+            
+            {/* User Profile Card */}
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader>
                 <CardTitle>Your Profile</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center space-y-4 pb-4">
-                  <Avatar className="h-20 w-20">
+                <div className="flex flex-col items-center space-y-4">
+                  <Avatar className="h-16 w-16">
                     <AvatarImage src={profile?.avatar_url || ""} />
                     <AvatarFallback className="text-lg">
                       {profile?.first_name && profile?.last_name 
@@ -292,90 +330,24 @@ const Dashboard = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="text-center">
-                    <h3 className="font-medium text-lg">
+                    <h3 className="font-medium">
                       {profile?.first_name && profile?.last_name 
                         ? `${profile.first_name} ${profile.last_name}`
                         : user?.email?.split("@")[0] || "User"}
                     </h3>
-                    <p className="text-gray-500">{userType.charAt(0).toUpperCase() + userType.slice(1)}</p>
+                    <p className="text-sm text-gray-500">{userType.charAt(0).toUpperCase() + userType.slice(1)}</p>
                   </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => navigate("/profile")}
+                  >
+                    Edit Profile
+                  </Button>
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => navigate("/profile")}
-                >
-                  Edit Profile
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Upcoming Activities</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-l-4 border-edu-blue pl-4 py-1">
-                  <p className="font-medium">Assessment Due</p>
-                  <p className="text-sm text-gray-500">AI Ethics Quiz - May 24</p>
-                </div>
-                <div className="border-l-4 border-edu-purple pl-4 py-1">
-                  <p className="font-medium">Course Update</p>
-                  <p className="text-sm text-gray-500">New Machine Learning content added</p>
-                </div>
-                <div className="border-l-4 border-edu-blue-light pl-4 py-1">
-                  <p className="font-medium">Leaderboard Update</p>
-                  <p className="text-sm text-gray-500">Weekly rankings refreshed</p>
-                </div>
-                <Button
-                  variant="link"
-                  className="pl-0 text-edu-blue"
-                  onClick={() => navigate("/leaderboard")}
-                >
-                  View Leaderboard
-                </Button>
               </CardContent>
             </Card>
           </div>
-        </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Subscription Plans</CardTitle>
-            <CardDescription>
-              Upgrade your learning experience with our premium plans
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PaymentPlans />
-          </CardContent>
-        </Card>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-2xl font-semibold mb-4">Getting Started</h2>
-          <ul className="space-y-3">
-            <li className="flex">
-              <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-edu-blue text-white mr-3">1</span>
-              <div>
-                <h3 className="font-medium">Explore your courses</h3>
-                <p className="text-gray-500">Browse through available courses or view your enrolled ones.</p>
-              </div>
-            </li>
-            <li className="flex">
-              <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-edu-purple text-white mr-3">2</span>
-              <div>
-                <h3 className="font-medium">Complete assessments</h3>
-                <p className="text-gray-500">Take quizzes and tests to evaluate your understanding.</p>
-              </div>
-            </li>
-            <li className="flex">
-              <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-edu-blue-light text-white mr-3">3</span>
-              <div>
-                <h3 className="font-medium">Ask the AI tutor</h3>
-                <p className="text-gray-500">Get help with difficult concepts and homework questions.</p>
-              </div>
-            </li>
-          </ul>
         </div>
       </div>
     </DashboardLayout>
