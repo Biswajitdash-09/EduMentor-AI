@@ -45,30 +45,44 @@ const RealtimeLeaderboard = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      const { data, error } = await supabase
+      // First get user achievements
+      const { data: achievements, error: achievementsError } = await supabase
         .from('user_achievements')
-        .select(`
-          user_id,
-          points,
-          profiles!inner(
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
+        .select('user_id, points')
         .order('points', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (achievementsError) throw achievementsError;
 
-      const leaderboardData = data?.map((item, index) => ({
-        id: item.user_id,
-        first_name: item.profiles.first_name || 'Unknown',
-        last_name: item.profiles.last_name || 'User',
-        avatar_url: item.profiles.avatar_url,
-        points: item.points,
-        rank: index + 1
-      })) || [];
+      if (!achievements || achievements.length === 0) {
+        setTopUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get user IDs from achievements
+      const userIds = achievements.map(achievement => achievement.user_id);
+
+      // Then get profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine the data
+      const leaderboardData = achievements.map((achievement, index) => {
+        const profile = profiles?.find(p => p.id === achievement.user_id);
+        return {
+          id: achievement.user_id,
+          first_name: profile?.first_name || 'Unknown',
+          last_name: profile?.last_name || 'User',
+          avatar_url: profile?.avatar_url,
+          points: achievement.points,
+          rank: index + 1
+        };
+      });
 
       setTopUsers(leaderboardData);
     } catch (error) {
