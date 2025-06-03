@@ -43,17 +43,10 @@ const signUpSchema = z.object({
 
 const SignUp = () => {
   const { userType } = useParams<{ userType: string }>();
-  const { signUp, user } = useAuth();
+  const { signUp, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Handle navigation when user is authenticated
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [user, navigate]);
   
   const form = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -65,6 +58,13 @@ const SignUp = () => {
       confirmPassword: "",
     },
   });
+
+  // Handle navigation when user is authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const onSubmit = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
@@ -109,26 +109,27 @@ const SignUp = () => {
     }
   };
 
-  if (user) {
-    return <Navigate to="/dashboard" />;
+  // If user is already authenticated, redirect immediately
+  if (user && !authLoading) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-edu-blue mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const validatedUserType: UserType = 
     userType === "student" || userType === "faculty" || userType === "admin" 
       ? userType 
       : "student";
-
-  // Don't render the form if user is already authenticated
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-edu-blue mx-auto"></div>
-          <p className="mt-2 text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -220,7 +221,7 @@ const SignUp = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-edu-blue hover:bg-edu-blue-dark"
-                disabled={loading}
+                disabled={loading || authLoading}
               >
                 {loading ? (
                   <>

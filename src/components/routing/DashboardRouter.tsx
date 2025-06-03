@@ -4,21 +4,34 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // Role-based dashboard redirect
 export const DashboardRouter = () => {
-  const { profile, loading } = useAuth();
+  const { profile, loading, user } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-edu-blue"></div>
+        <span className="ml-2 text-gray-600">Loading...</span>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/signin/student" replace />;
   }
   
   if (!profile) {
-    return <Navigate to="/signin/student" />;
+    // If no profile but user exists, redirect to student dashboard as default
+    return <Navigate to="/student" replace />;
   }
   
-  if (profile.user_type === "admin") {
-    return <Navigate to="/admin" />;
-  } else if (profile.user_type === "faculty") {
-    return <Navigate to="/faculty" />;
-  } else {
-    return <Navigate to="/student" />;
+  // Route based on user type
+  switch (profile.user_type) {
+    case "admin":
+      return <Navigate to="/admin" replace />;
+    case "faculty":
+      return <Navigate to="/faculty" replace />;
+    case "student":
+    default:
+      return <Navigate to="/student" replace />;
   }
 };

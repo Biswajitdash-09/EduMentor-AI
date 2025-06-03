@@ -4,7 +4,6 @@ import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -38,17 +37,10 @@ type UserType = "student" | "faculty" | "admin";
 
 const SignIn = () => {
   const { userType } = useParams<{ userType: string }>();
-  const { signIn, user } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Handle navigation when user is authenticated
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [user, navigate]);
   
   const form = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -58,10 +50,18 @@ const SignIn = () => {
     },
   });
 
+  // Handle navigation when user is authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const onSubmit = async (values: z.infer<typeof signInSchema>) => {
     setLoading(true);
     try {
       await signIn(values.email, values.password);
+      // Navigation will be handled by the useEffect above
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {
@@ -115,26 +115,27 @@ const SignIn = () => {
     }
   };
 
-  if (user) {
-    return <Navigate to="/dashboard" />;
+  // If user is already authenticated, redirect immediately
+  if (user && !authLoading) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-edu-blue mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const validatedUserType: UserType = 
     userType === "student" || userType === "faculty" || userType === "admin" 
       ? userType 
       : "student";
-
-  // Don't render the form if user is already authenticated
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-edu-blue mx-auto"></div>
-          <p className="mt-2 text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -185,7 +186,7 @@ const SignIn = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-edu-blue hover:bg-edu-blue-dark"
-                disabled={loading}
+                disabled={loading || authLoading}
               >
                 {loading ? (
                   <>
